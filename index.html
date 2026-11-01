@@ -796,8 +796,15 @@ pre.q{font:11px/1.45 var(--f-mono);background:var(--soft);border-radius:4px;padd
         <button class="primary" id="btnOSM">Descargar de OpenStreetMap</button>
         <span class="btn file">Cargar archivo de red<input type="file" id="fileNet" accept=".json,.geojson,application/json"></span>
       </div>
-      <div class="row" id="rowValle" hidden>
-        <button id="btnValle">Cargar red del Valle de San Nicolás (8 municipios)</button>
+      <div id="rowValle" hidden>
+        <label class="f">Valle de San Nicolás: territorio a cargar<select id="selValle">
+          <option value="">Los 8 municipios juntos</option>
+          <option value="Rionegro">Rionegro</option><option value="Guarne">Guarne</option><option value="Marinilla">Marinilla</option>
+          <option value="El_Carmen_de_Viboral">El Carmen de Viboral</option><option value="La_Ceja">La Ceja</option><option value="El_Retiro">El Retiro</option>
+          <option value="San_Vicente">San Vicente</option><option value="El_Santuario">El Santuario</option>
+        </select></label>
+        <div class="row"><button id="btnValle">Cargar red del Valle</button></div>
+        <p class="hint">Si eliges un solo municipio, cada celda se asigna al destino más cercano <b>dentro de ese municipio</b>: no se consideran los destinos de los vecinos. Con los 8 juntos, el destino más cercano puede estar en otro municipio.</p>
       </div>
       <div id="osmHelp" hidden>
         <p class="note warn">Esta vista no permite conexiones a servidores externos. Ejecuta la consulta en overpass-turbo, exporta el resultado como «raw OSM data» (JSON) y cárgalo con el botón de arriba.</p>
@@ -1955,8 +1962,9 @@ async function fetchGz(url,name){
   const blob=url.endsWith('.gz')?await new Response(r.body.pipeThrough(new DecompressionStream('gzip'))).blob():await r.blob();
   return new File([blob],name);}
 if(/^https?:$/.test(location.protocol)){$('#rowValle').hidden=false;$('#btnPopValle').hidden=false;}
-$('#btnValle').onclick=async()=>{const b=$('#btnValle');b.disabled=true;try{$('#netStatus').textContent='Cargando la red del Valle de San Nicolás…';
-  await loadNetFile(await fetchGz('datos/valle_osm.json.gz','Valle de San Nicolás'));}
+$('#btnValle').onclick=async()=>{const b=$('#btnValle');b.disabled=true;try{$('#netStatus').textContent='Cargando la red…';
+  const m=$('#selValle').value,nm=$('#selValle').selectedOptions[0].text;
+  await loadNetFile(m?await fetchGz('datos/municipios/'+m+'.json.gz',nm):await fetchGz('datos/valle_osm.json.gz','Valle de San Nicolás'));}
   catch(e){$('#netStatus').textContent='Error: '+e.message;}finally{b.disabled=false;}};
 $('#btnPopValle').onclick=async()=>{try{$('#popStatus').textContent='Cargando población del Valle…';
   await loadPopFile(await fetchGz('datos/poblacion_valle_san_nicolas_estimada.csv','poblacion_valle_san_nicolas_estimada.csv'));}
