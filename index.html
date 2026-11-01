@@ -699,6 +699,8 @@ body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 var(--f-body)}
 .mapwrap{position:relative;min-width:0}
 #map{position:absolute;inset:0;background:var(--map-bg)}
 header .credits{margin:6px 0 0;font:500 12px/1.45 var(--f-body);color:var(--muted)}
+header .manual{display:inline-flex;align-items:center;gap:6px;margin-top:10px;margin-right:8px;font:600 13px var(--f-body);color:var(--accent);border:1px solid var(--accent);border-radius:4px;padding:5px 10px;text-decoration:none}
+header .manual:hover{background:var(--accent);color:var(--bg)}
 header .credits b{display:block;color:var(--fg);font-weight:600}
 header h1{font:600 30px/1 var(--f-display);letter-spacing:.01em;margin:0;text-wrap:balance}
 header p{margin:6px 0 0;color:var(--muted);font-size:14px}
@@ -783,6 +785,7 @@ pre.q{font:11px/1.45 var(--f-mono);background:var(--soft);border-radius:4px;padd
       <h1>Isócronas inversas</h1>
       <p class="credits" id="credits"></p>
       <p>Tiempo, distancia y costo de llegar a los centros de atención desde cualquier punto del territorio, para personas sin limitación y con movilidad reducida.</p>
+      <a class="manual" id="lnkManual" href="http://isocronasinversas.info/manual.html" target="_blank" rel="noopener">📖 Manual de uso y glosario</a>
       <span class="src" id="srcTag">red: —</span>
     </header>
 
@@ -2023,6 +2026,7 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change',onTheme);
 /* =================== créditos =================== */
 const EQUIPO=['Gustavo Cano','David Gómez','Diego Hoyos','Juan J. Pérez'];  // nombres del equipo, uno por elemento
 const CURSO='Investigación para el curso Laboratorio II de la Maestría en Procesos Urbanos y Ambientales de la Universidad EAFIT';
+if(/^https?:$/.test(location.protocol))$('#lnkManual').href='manual.html';
 $('#credits').innerHTML=(EQUIPO.length?`<b>${EQUIPO.map(esc).join(' · ')}</b>`:'')+esc(CURSO);
 
 /* =================== inicio =================== */
