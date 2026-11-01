@@ -1,0 +1,2013 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Isócronas inversas</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=IBM+Plex+Mono:wght@400;500&family=Source+Sans+3:wght@400;600&display=swap">
+<style>
+/* required styles */
+
+.leaflet-pane,
+.leaflet-tile,
+.leaflet-marker-icon,
+.leaflet-marker-shadow,
+.leaflet-tile-container,
+.leaflet-pane > svg,
+.leaflet-pane > canvas,
+.leaflet-zoom-box,
+.leaflet-image-layer,
+.leaflet-layer {
+	position: absolute;
+	left: 0;
+	top: 0;
+	}
+.leaflet-container {
+	overflow: hidden;
+	}
+.leaflet-tile,
+.leaflet-marker-icon,
+.leaflet-marker-shadow {
+	-webkit-user-select: none;
+	   -moz-user-select: none;
+	        user-select: none;
+	  -webkit-user-drag: none;
+	}
+/* Prevents IE11 from highlighting tiles in blue */
+.leaflet-tile::selection {
+	background: transparent;
+}
+/* Safari renders non-retina tile on retina better with this, but Chrome is worse */
+.leaflet-safari .leaflet-tile {
+	image-rendering: -webkit-optimize-contrast;
+	}
+/* hack that prevents hw layers "stretching" when loading new tiles */
+.leaflet-safari .leaflet-tile-container {
+	width: 1600px;
+	height: 1600px;
+	-webkit-transform-origin: 0 0;
+	}
+.leaflet-marker-icon,
+.leaflet-marker-shadow {
+	display: block;
+	}
+/* .leaflet-container svg: reset svg max-width decleration shipped in Joomla! (joomla.org) 3.x */
+/* .leaflet-container img: map is broken in FF if you have max-width: 100% on tiles */
+.leaflet-container .leaflet-overlay-pane svg {
+	max-width: none !important;
+	max-height: none !important;
+	}
+.leaflet-container .leaflet-marker-pane img,
+.leaflet-container .leaflet-shadow-pane img,
+.leaflet-container .leaflet-tile-pane img,
+.leaflet-container img.leaflet-image-layer,
+.leaflet-container .leaflet-tile {
+	max-width: none !important;
+	max-height: none !important;
+	width: auto;
+	padding: 0;
+	}
+
+.leaflet-container img.leaflet-tile {
+	/* See: https://bugs.chromium.org/p/chromium/issues/detail?id=600120 */
+	mix-blend-mode: plus-lighter;
+}
+
+.leaflet-container.leaflet-touch-zoom {
+	-ms-touch-action: pan-x pan-y;
+	touch-action: pan-x pan-y;
+	}
+.leaflet-container.leaflet-touch-drag {
+	-ms-touch-action: pinch-zoom;
+	/* Fallback for FF which doesn't support pinch-zoom */
+	touch-action: none;
+	touch-action: pinch-zoom;
+}
+.leaflet-container.leaflet-touch-drag.leaflet-touch-zoom {
+	-ms-touch-action: none;
+	touch-action: none;
+}
+.leaflet-container {
+	-webkit-tap-highlight-color: transparent;
+}
+.leaflet-container a {
+	-webkit-tap-highlight-color: rgba(51, 181, 229, 0.4);
+}
+.leaflet-tile {
+	filter: inherit;
+	visibility: hidden;
+	}
+.leaflet-tile-loaded {
+	visibility: inherit;
+	}
+.leaflet-zoom-box {
+	width: 0;
+	height: 0;
+	-moz-box-sizing: border-box;
+	     box-sizing: border-box;
+	z-index: 800;
+	}
+/* workaround for https://bugzilla.mozilla.org/show_bug.cgi?id=888319 */
+.leaflet-overlay-pane svg {
+	-moz-user-select: none;
+	}
+
+.leaflet-pane         { z-index: 400; }
+
+.leaflet-tile-pane    { z-index: 200; }
+.leaflet-overlay-pane { z-index: 400; }
+.leaflet-shadow-pane  { z-index: 500; }
+.leaflet-marker-pane  { z-index: 600; }
+.leaflet-tooltip-pane   { z-index: 650; }
+.leaflet-popup-pane   { z-index: 700; }
+
+.leaflet-map-pane canvas { z-index: 100; }
+.leaflet-map-pane svg    { z-index: 200; }
+
+.leaflet-vml-shape {
+	width: 1px;
+	height: 1px;
+	}
+.lvml {
+	display: inline-block;
+	position: absolute;
+	}
+
+
+/* control positioning */
+
+.leaflet-control {
+	position: relative;
+	z-index: 800;
+	pointer-events: visiblePainted; /* IE 9-10 doesn't have auto */
+	pointer-events: auto;
+	}
+.leaflet-top,
+.leaflet-bottom {
+	position: absolute;
+	z-index: 1000;
+	pointer-events: none;
+	}
+.leaflet-top {
+	top: 0;
+	}
+.leaflet-right {
+	right: 0;
+	}
+.leaflet-bottom {
+	bottom: 0;
+	}
+.leaflet-left {
+	left: 0;
+	}
+.leaflet-control {
+	float: left;
+	clear: both;
+	}
+.leaflet-right .leaflet-control {
+	float: right;
+	}
+.leaflet-top .leaflet-control {
+	margin-top: 10px;
+	}
+.leaflet-bottom .leaflet-control {
+	margin-bottom: 10px;
+	}
+.leaflet-left .leaflet-control {
+	margin-left: 10px;
+	}
+.leaflet-right .leaflet-control {
+	margin-right: 10px;
+	}
+
+
+/* zoom and fade animations */
+
+.leaflet-fade-anim .leaflet-popup {
+	opacity: 0;
+	-webkit-transition: opacity 0.2s linear;
+	   -moz-transition: opacity 0.2s linear;
+	        transition: opacity 0.2s linear;
+	}
+.leaflet-fade-anim .leaflet-map-pane .leaflet-popup {
+	opacity: 1;
+	}
+.leaflet-zoom-animated {
+	-webkit-transform-origin: 0 0;
+	    -ms-transform-origin: 0 0;
+	        transform-origin: 0 0;
+	}
+svg.leaflet-zoom-animated {
+	will-change: transform;
+}
+
+.leaflet-zoom-anim .leaflet-zoom-animated {
+	-webkit-transition: -webkit-transform 0.25s cubic-bezier(0,0,0.25,1);
+	   -moz-transition:    -moz-transform 0.25s cubic-bezier(0,0,0.25,1);
+	        transition:         transform 0.25s cubic-bezier(0,0,0.25,1);
+	}
+.leaflet-zoom-anim .leaflet-tile,
+.leaflet-pan-anim .leaflet-tile {
+	-webkit-transition: none;
+	   -moz-transition: none;
+	        transition: none;
+	}
+
+.leaflet-zoom-anim .leaflet-zoom-hide {
+	visibility: hidden;
+	}
+
+
+/* cursors */
+
+.leaflet-interactive {
+	cursor: pointer;
+	}
+.leaflet-grab {
+	cursor: -webkit-grab;
+	cursor:    -moz-grab;
+	cursor:         grab;
+	}
+.leaflet-crosshair,
+.leaflet-crosshair .leaflet-interactive {
+	cursor: crosshair;
+	}
+.leaflet-popup-pane,
+.leaflet-control {
+	cursor: auto;
+	}
+.leaflet-dragging .leaflet-grab,
+.leaflet-dragging .leaflet-grab .leaflet-interactive,
+.leaflet-dragging .leaflet-marker-draggable {
+	cursor: move;
+	cursor: -webkit-grabbing;
+	cursor:    -moz-grabbing;
+	cursor:         grabbing;
+	}
+
+/* marker & overlays interactivity */
+.leaflet-marker-icon,
+.leaflet-marker-shadow,
+.leaflet-image-layer,
+.leaflet-pane > svg path,
+.leaflet-tile-container {
+	pointer-events: none;
+	}
+
+.leaflet-marker-icon.leaflet-interactive,
+.leaflet-image-layer.leaflet-interactive,
+.leaflet-pane > svg path.leaflet-interactive,
+svg.leaflet-image-layer.leaflet-interactive path {
+	pointer-events: visiblePainted; /* IE 9-10 doesn't have auto */
+	pointer-events: auto;
+	}
+
+/* visual tweaks */
+
+.leaflet-container {
+	background: #ddd;
+	outline-offset: 1px;
+	}
+.leaflet-container a {
+	color: #0078A8;
+	}
+.leaflet-zoom-box {
+	border: 2px dotted #38f;
+	background: rgba(255,255,255,0.5);
+	}
+
+
+/* general typography */
+.leaflet-container {
+	font-family: "Helvetica Neue", Arial, Helvetica, sans-serif;
+	font-size: 12px;
+	font-size: 0.75rem;
+	line-height: 1.5;
+	}
+
+
+/* general toolbar styles */
+
+.leaflet-bar {
+	box-shadow: 0 1px 5px rgba(0,0,0,0.65);
+	border-radius: 4px;
+	}
+.leaflet-bar a {
+	background-color: #fff;
+	border-bottom: 1px solid #ccc;
+	width: 26px;
+	height: 26px;
+	line-height: 26px;
+	display: block;
+	text-align: center;
+	text-decoration: none;
+	color: black;
+	}
+.leaflet-bar a,
+.leaflet-control-layers-toggle {
+	background-position: 50% 50%;
+	background-repeat: no-repeat;
+	display: block;
+	}
+.leaflet-bar a:hover,
+.leaflet-bar a:focus {
+	background-color: #f4f4f4;
+	}
+.leaflet-bar a:first-child {
+	border-top-left-radius: 4px;
+	border-top-right-radius: 4px;
+	}
+.leaflet-bar a:last-child {
+	border-bottom-left-radius: 4px;
+	border-bottom-right-radius: 4px;
+	border-bottom: none;
+	}
+.leaflet-bar a.leaflet-disabled {
+	cursor: default;
+	background-color: #f4f4f4;
+	color: #bbb;
+	}
+
+.leaflet-touch .leaflet-bar a {
+	width: 30px;
+	height: 30px;
+	line-height: 30px;
+	}
+.leaflet-touch .leaflet-bar a:first-child {
+	border-top-left-radius: 2px;
+	border-top-right-radius: 2px;
+	}
+.leaflet-touch .leaflet-bar a:last-child {
+	border-bottom-left-radius: 2px;
+	border-bottom-right-radius: 2px;
+	}
+
+/* zoom control */
+
+.leaflet-control-zoom-in,
+.leaflet-control-zoom-out {
+	font: bold 18px 'Lucida Console', Monaco, monospace;
+	text-indent: 1px;
+	}
+
+.leaflet-touch .leaflet-control-zoom-in, .leaflet-touch .leaflet-control-zoom-out  {
+	font-size: 22px;
+	}
+
+
+/* layers control */
+
+.leaflet-control-layers {
+	box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+	background: #fff;
+	border-radius: 5px;
+	}
+.leaflet-control-layers-toggle {
+	width: 36px;
+	height: 36px;
+	}
+.leaflet-retina .leaflet-control-layers-toggle {
+	background-size: 26px 26px;
+	}
+.leaflet-touch .leaflet-control-layers-toggle {
+	width: 44px;
+	height: 44px;
+	}
+.leaflet-control-layers .leaflet-control-layers-list,
+.leaflet-control-layers-expanded .leaflet-control-layers-toggle {
+	display: none;
+	}
+.leaflet-control-layers-expanded .leaflet-control-layers-list {
+	display: block;
+	position: relative;
+	}
+.leaflet-control-layers-expanded {
+	padding: 6px 10px 6px 6px;
+	color: #333;
+	background: #fff;
+	}
+.leaflet-control-layers-scrollbar {
+	overflow-y: scroll;
+	overflow-x: hidden;
+	padding-right: 5px;
+	}
+.leaflet-control-layers-selector {
+	margin-top: 2px;
+	position: relative;
+	top: 1px;
+	}
+.leaflet-control-layers label {
+	display: block;
+	font-size: 13px;
+	font-size: 1.08333em;
+	}
+.leaflet-control-layers-separator {
+	height: 0;
+	border-top: 1px solid #ddd;
+	margin: 5px -10px 5px -6px;
+	}
+
+/* Default icon URLs */
+.leaflet-default-icon-path { /* used only in path-guessing heuristic, see L.Icon.Default */
+	}
+
+
+/* attribution and scale controls */
+
+.leaflet-container .leaflet-control-attribution {
+	background: #fff;
+	background: rgba(255, 255, 255, 0.8);
+	margin: 0;
+	}
+.leaflet-control-attribution,
+.leaflet-control-scale-line {
+	padding: 0 5px;
+	color: #333;
+	line-height: 1.4;
+	}
+.leaflet-control-attribution a {
+	text-decoration: none;
+	}
+.leaflet-control-attribution a:hover,
+.leaflet-control-attribution a:focus {
+	text-decoration: underline;
+	}
+.leaflet-attribution-flag {
+	display: inline !important;
+	vertical-align: baseline !important;
+	width: 1em;
+	height: 0.6669em;
+	}
+.leaflet-left .leaflet-control-scale {
+	margin-left: 5px;
+	}
+.leaflet-bottom .leaflet-control-scale {
+	margin-bottom: 5px;
+	}
+.leaflet-control-scale-line {
+	border: 2px solid #777;
+	border-top: none;
+	line-height: 1.1;
+	padding: 2px 5px 1px;
+	white-space: nowrap;
+	-moz-box-sizing: border-box;
+	     box-sizing: border-box;
+	background: rgba(255, 255, 255, 0.8);
+	text-shadow: 1px 1px #fff;
+	}
+.leaflet-control-scale-line:not(:first-child) {
+	border-top: 2px solid #777;
+	border-bottom: none;
+	margin-top: -2px;
+	}
+.leaflet-control-scale-line:not(:first-child):not(:last-child) {
+	border-bottom: 2px solid #777;
+	}
+
+.leaflet-touch .leaflet-control-attribution,
+.leaflet-touch .leaflet-control-layers,
+.leaflet-touch .leaflet-bar {
+	box-shadow: none;
+	}
+.leaflet-touch .leaflet-control-layers,
+.leaflet-touch .leaflet-bar {
+	border: 2px solid rgba(0,0,0,0.2);
+	background-clip: padding-box;
+	}
+
+
+/* popup */
+
+.leaflet-popup {
+	position: absolute;
+	text-align: center;
+	margin-bottom: 20px;
+	}
+.leaflet-popup-content-wrapper {
+	padding: 1px;
+	text-align: left;
+	border-radius: 12px;
+	}
+.leaflet-popup-content {
+	margin: 13px 24px 13px 20px;
+	line-height: 1.3;
+	font-size: 13px;
+	font-size: 1.08333em;
+	min-height: 1px;
+	}
+.leaflet-popup-content p {
+	margin: 17px 0;
+	margin: 1.3em 0;
+	}
+.leaflet-popup-tip-container {
+	width: 40px;
+	height: 20px;
+	position: absolute;
+	left: 50%;
+	margin-top: -1px;
+	margin-left: -20px;
+	overflow: hidden;
+	pointer-events: none;
+	}
+.leaflet-popup-tip {
+	width: 17px;
+	height: 17px;
+	padding: 1px;
+
+	margin: -10px auto 0;
+	pointer-events: auto;
+
+	-webkit-transform: rotate(45deg);
+	   -moz-transform: rotate(45deg);
+	    -ms-transform: rotate(45deg);
+	        transform: rotate(45deg);
+	}
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+	background: white;
+	color: #333;
+	box-shadow: 0 3px 14px rgba(0,0,0,0.4);
+	}
+.leaflet-container a.leaflet-popup-close-button {
+	position: absolute;
+	top: 0;
+	right: 0;
+	border: none;
+	text-align: center;
+	width: 24px;
+	height: 24px;
+	font: 16px/24px Tahoma, Verdana, sans-serif;
+	color: #757575;
+	text-decoration: none;
+	background: transparent;
+	}
+.leaflet-container a.leaflet-popup-close-button:hover,
+.leaflet-container a.leaflet-popup-close-button:focus {
+	color: #585858;
+	}
+.leaflet-popup-scrolled {
+	overflow: auto;
+	}
+
+.leaflet-oldie .leaflet-popup-content-wrapper {
+	-ms-zoom: 1;
+	}
+.leaflet-oldie .leaflet-popup-tip {
+	width: 24px;
+	margin: 0 auto;
+
+	-ms-filter: "progid:DXImageTransform.Microsoft.Matrix(M11=0.70710678, M12=0.70710678, M21=-0.70710678, M22=0.70710678)";
+	filter: progid:DXImageTransform.Microsoft.Matrix(M11=0.70710678, M12=0.70710678, M21=-0.70710678, M22=0.70710678);
+	}
+
+.leaflet-oldie .leaflet-control-zoom,
+.leaflet-oldie .leaflet-control-layers,
+.leaflet-oldie .leaflet-popup-content-wrapper,
+.leaflet-oldie .leaflet-popup-tip {
+	border: 1px solid #999;
+	}
+
+
+/* div icon */
+
+.leaflet-div-icon {
+	background: #fff;
+	border: 1px solid #666;
+	}
+
+
+/* Tooltip */
+/* Base styles for the element that has a tooltip */
+.leaflet-tooltip {
+	position: absolute;
+	padding: 6px;
+	background-color: #fff;
+	border: 1px solid #fff;
+	border-radius: 3px;
+	color: #222;
+	white-space: nowrap;
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
+	pointer-events: none;
+	box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+	}
+.leaflet-tooltip.leaflet-interactive {
+	cursor: pointer;
+	pointer-events: auto;
+	}
+.leaflet-tooltip-top:before,
+.leaflet-tooltip-bottom:before,
+.leaflet-tooltip-left:before,
+.leaflet-tooltip-right:before {
+	position: absolute;
+	pointer-events: none;
+	border: 6px solid transparent;
+	background: transparent;
+	content: "";
+	}
+
+/* Directions */
+
+.leaflet-tooltip-bottom {
+	margin-top: 6px;
+}
+.leaflet-tooltip-top {
+	margin-top: -6px;
+}
+.leaflet-tooltip-bottom:before,
+.leaflet-tooltip-top:before {
+	left: 50%;
+	margin-left: -6px;
+	}
+.leaflet-tooltip-top:before {
+	bottom: 0;
+	margin-bottom: -12px;
+	border-top-color: #fff;
+	}
+.leaflet-tooltip-bottom:before {
+	top: 0;
+	margin-top: -12px;
+	margin-left: -6px;
+	border-bottom-color: #fff;
+	}
+.leaflet-tooltip-left {
+	margin-left: -6px;
+}
+.leaflet-tooltip-right {
+	margin-left: 6px;
+}
+.leaflet-tooltip-left:before,
+.leaflet-tooltip-right:before {
+	top: 50%;
+	margin-top: -6px;
+	}
+.leaflet-tooltip-left:before {
+	right: 0;
+	margin-right: -12px;
+	border-left-color: #fff;
+	}
+.leaflet-tooltip-right:before {
+	left: 0;
+	margin-left: -12px;
+	border-right-color: #fff;
+	}
+
+/* Printing */
+
+@media print {
+	/* Prevent printers from removing background-images of controls. */
+	.leaflet-control {
+		-webkit-print-color-adjust: exact;
+		print-color-adjust: exact;
+		}
+	}
+
+</style>
+<style>
+/* Layout: panel de control a la izquierda, mapa a pantalla completa a la derecha; en teléfono el mapa va arriba y el panel debajo. */
+:root{
+  --bg:#eef2f0; --panel:#fafcfb; --fg:#17201d; --muted:#56635e; --line:#d3dbd7; --soft:#e4eae7;
+  --accent:#0f6a73; --accent-ink:#ffffff; --warn:#a8461f; --ok:#2f7a4d;
+  --map-bg:#e3e9e6; --net-major:#6f7c77; --net-minor:#a3afaa; --net-path:#b29f7f; --steps:#c2410c;
+  --dest:#0f6a73; --dest-edu:#c9822b; --dest-ring:#ffffff;
+  --f-display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --f-body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e1412; --panel:#141c19; --fg:#e2eae6; --muted:#97a6a0; --line:#2a3531; --soft:#1c2622;
+  --accent:#4fb3ba; --accent-ink:#06201f; --warn:#f0925f; --ok:#6cc08b;
+  --map-bg:#18201d; --net-major:#77857f; --net-minor:#4a5651; --net-path:#776a52; --steps:#f08a4b;
+  --dest:#4fb3ba; --dest-edu:#e0a352; --dest-ring:#0e1412; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1412; --panel:#141c19; --fg:#e2eae6; --muted:#97a6a0; --line:#2a3531; --soft:#1c2622;
+  --accent:#4fb3ba; --accent-ink:#06201f; --warn:#f0925f; --ok:#6cc08b;
+  --map-bg:#18201d; --net-major:#77857f; --net-minor:#4a5651; --net-path:#776a52; --steps:#f08a4b;
+  --dest:#4fb3ba; --dest-edu:#e0a352; --dest-ring:#0e1412; color-scheme:dark}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 var(--f-body)}
+.app{display:grid;grid-template-columns:minmax(330px,400px) 1fr;height:100%}
+.panel{overflow-y:auto;background:var(--panel);border-right:1px solid var(--line);
+  padding-block:18px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:16px;
+  display:flex;flex-direction:column;gap:18px;min-width:0}
+.mapwrap{position:relative;min-width:0}
+#map{position:absolute;inset:0;background:var(--map-bg)}
+header .credits{margin:6px 0 0;font:500 12px/1.45 var(--f-body);color:var(--muted)}
+header .credits b{display:block;color:var(--fg);font-weight:600}
+header h1{font:600 30px/1 var(--f-display);letter-spacing:.01em;margin:0;text-wrap:balance}
+header p{margin:6px 0 0;color:var(--muted);font-size:14px}
+.src{display:inline-flex;gap:6px;align-items:center;margin-top:10px;font:500 12px var(--f-mono);
+  padding:3px 8px;border-radius:3px;background:var(--soft);color:var(--muted)}
+.src.demo{background:color-mix(in srgb,var(--warn) 16%,transparent);color:var(--warn)}
+section{display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--line);padding-top:14px}
+section>h2{font:600 18px/1.1 var(--f-display);text-transform:uppercase;letter-spacing:.06em;margin:0;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+section>h2 small{font:400 12px var(--f-mono);text-transform:none;letter-spacing:0;color:var(--muted)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.row>*{min-width:0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+label.f{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted)}
+input[type=text],input[type=number],select{font:14px var(--f-body);color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:6px 8px;width:100%;min-width:0}
+input[type=number]{font-family:var(--f-mono);font-size:13px}
+input:focus-visible,select:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+button,.btn{font:600 13px var(--f-body);border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:4px;padding:7px 11px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+button:hover,.btn:hover{border-color:var(--accent)}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+button.on{background:color-mix(in srgb,var(--accent) 18%,var(--bg));border-color:var(--accent)}
+button:disabled{opacity:.5;cursor:default}
+.file{position:relative;overflow:hidden}
+.file input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.note{font-size:13px;color:var(--muted);margin:0}
+.note.warn{color:var(--warn)}
+.mono{font-family:var(--f-mono);font-size:12px}
+.status{font:12px/1.5 var(--f-mono);color:var(--muted);background:var(--soft);border-radius:4px;padding:8px 10px;white-space:pre-wrap}
+.dlist{display:flex;flex-direction:column;max-height:220px;overflow:auto;border:1px solid var(--line);border-radius:4px}
+.dlist label{display:grid;grid-template-columns:auto 1fr auto auto;gap:8px;align-items:center;padding:5px 8px;border-bottom:1px solid var(--soft);font-size:13px}
+.dlist label:last-child{border-bottom:0}
+.dlist .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chip{font:11px var(--f-mono);color:var(--muted);background:var(--soft);padding:1px 6px;border-radius:3px}
+.x{border:0;background:none;padding:2px 6px;color:var(--muted)}
+details.prof{border:1px solid var(--line);border-radius:4px;background:var(--bg)}
+details.prof>summary{list-style:none;display:grid;grid-template-columns:auto 10px 1fr auto;gap:8px;align-items:center;padding:7px 9px;cursor:pointer;font-size:14px}
+details.prof>summary::-webkit-details-marker{display:none}
+details.prof .body{padding:4px 10px 10px;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+details.prof .body .full{grid-column:1/-1}
+.sw{width:10px;height:10px;border-radius:2px}
+.tag{font:11px var(--f-mono);padding:1px 6px;border-radius:3px;border:1px solid var(--line);color:var(--muted)}
+.tag.pmr{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 50%,var(--line))}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:4px}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th,td{padding:6px 8px;text-align:right;border-bottom:1px solid var(--soft);white-space:nowrap;font-variant-numeric:tabular-nums}
+th:first-child,td:first-child{text-align:left;white-space:normal;min-width:140px}
+th{font:600 11px var(--f-body);text-transform:uppercase;letter-spacing:.05em;color:var(--muted);background:var(--soft)}
+td.num{font-family:var(--f-mono);font-size:12px}
+tr.active td{background:color-mix(in srgb,var(--accent) 10%,transparent)}
+.legend{position:absolute;left:calc(12px + env(safe-area-inset-left,0px));bottom:calc(22px + env(safe-area-inset-bottom,0px));z-index:500;background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:10px 12px;max-width:260px;font-size:12px;box-shadow:0 2px 10px rgb(0 0 0 / .12)}
+.legend h3{margin:0 0 6px;font:600 14px var(--f-display);text-transform:uppercase;letter-spacing:.05em}
+.legend .li{display:grid;grid-template-columns:16px 1fr auto;gap:8px;align-items:center;font-variant-numeric:tabular-nums}
+.legend .li span:last-child{font-family:var(--f-mono);color:var(--muted)}
+.legend .bx{width:16px;height:11px;border-radius:2px}
+.query{position:absolute;right:calc(12px + env(safe-area-inset-right,0px));bottom:calc(22px + env(safe-area-inset-bottom,0px));z-index:600;width:min(440px,calc(100% - 24px));max-height:55%;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:12px;box-shadow:0 4px 18px rgb(0 0 0 / .18);display:flex;flex-direction:column;gap:8px}
+.query h3{margin:0;font:600 18px var(--f-display);text-transform:uppercase;letter-spacing:.05em;display:flex;justify-content:space-between;align-items:center}
+.banner{position:absolute;left:50%;transform:translateX(-50%);top:12px;z-index:550;background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:6px 12px;font:12px var(--f-mono);color:var(--muted);max-width:calc(100% - 24px)}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:2000;background:var(--fg);color:var(--bg);padding:8px 14px;border-radius:4px;font-size:13px;max-width:calc(100% - 32px)}
+.gridimg{image-rendering:pixelated}
+.mname{background:none;border:0;pointer-events:none}
+.mname span{display:inline-block;transform:translate(-50%,-50%);white-space:nowrap;font:600 14px var(--f-display);letter-spacing:.04em;text-transform:uppercase;color:var(--fg);
+  text-shadow:0 0 3px var(--panel),0 0 3px var(--panel),0 0 5px var(--panel),0 0 5px var(--panel)}
+.leaflet-container{background:var(--map-bg);font-family:var(--f-body)}
+.leaflet-tooltip{font:12px var(--f-body)}
+.hint{font-size:12px;color:var(--muted)}
+pre.q{font:11px/1.45 var(--f-mono);background:var(--soft);border-radius:4px;padding:8px;overflow:auto;max-height:160px;margin:0;white-space:pre}
+@media (max-width:760px){
+  .app{grid-template-columns:1fr;grid-template-rows:62vh auto;height:auto}
+  .mapwrap{order:-1;height:62vh}
+  .panel{border-right:0;overflow:visible;padding-right:max(16px,env(safe-area-inset-right,0px))}
+  .legend{max-width:165px;font-size:11px;padding:6px 8px;bottom:auto;top:12px;left:auto;right:calc(12px + env(safe-area-inset-right,0px))}
+  .legend h3{font-size:12px}
+  .query{max-height:60%;bottom:12px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+</head>
+<body>
+<div class="app">
+  <aside class="panel" id="panel">
+    <header>
+      <h1>Isócronas inversas</h1>
+      <p class="credits" id="credits"></p>
+      <p>Tiempo, distancia y costo de llegar a los centros de atención desde cualquier punto del territorio, para personas sin limitación y con movilidad reducida.</p>
+      <span class="src" id="srcTag">red: —</span>
+    </header>
+
+    <section id="secRed">
+      <h2>Red vial <small id="netSmall"></small></h2>
+      <div class="grid2">
+        <label class="f">Municipio o municipios (separados por coma)<input type="text" id="inMun" value="Rionegro"></label>
+        <label class="f">Departamento<input type="text" id="inDep" value="Antioquia"></label>
+      </div>
+      <div class="row">
+        <button class="primary" id="btnOSM">Descargar de OpenStreetMap</button>
+        <span class="btn file">Cargar archivo de red<input type="file" id="fileNet" accept=".json,.geojson,application/json"></span>
+      </div>
+      <div id="osmHelp" hidden>
+        <p class="note warn">Esta vista no permite conexiones a servidores externos. Ejecuta la consulta en overpass-turbo, exporta el resultado como «raw OSM data» (JSON) y cárgalo con el botón de arriba.</p>
+        <pre class="q" id="qText"></pre>
+        <div class="row"><button id="btnCopyQ">Copiar consulta</button><a class="btn" href="https://overpass-turbo.eu/" target="_blank" rel="noopener">Abrir overpass-turbo</a></div>
+      </div>
+      <div class="row">
+        <button id="btnDEM">Pendientes: descargar DEM</button>
+        <span class="btn file">Cargar DEM GeoTIFF<input type="file" id="fileDEM" accept=".tif,.tiff,image/tiff"></span>
+      </div>
+      <p class="hint">GeoTIFF en EPSG:4326, 4686, 9377 (Origen Nacional), 3116 (MAGNA Bogotá) o 32618.</p>
+      <div class="status" id="netStatus">Sin red cargada.</div>
+      <div class="row" id="persistRow">
+        <button id="btnSave" hidden>Guardar escenario en el artifact</button>
+        <button id="btnExpNet">Descargar red procesada</button>
+      </div>
+    </section>
+
+    <section id="secDest">
+      <h2>Destinos <small id="destCount"></small></h2>
+      <div class="row">
+        <button id="btnAddMode">Agregar con clic en el mapa</button>
+        <span class="btn file">Cargar CSV<input type="file" id="fileCSV" accept=".csv,.txt,text/csv"></span>
+      </div>
+      <div class="row">
+        <button id="btnAllOSM">Marcar todos</button>
+        <button id="btnNoneOSM">Desmarcar todos</button>
+      </div>
+      <div class="row">
+        <button id="btnOnlyHealth">Solo salud</button>
+        <button id="btnOnlyEdu">Solo instituciones educativas</button>
+      </div>
+      <div class="dlist" id="destList"></div>
+      <p class="hint">CSV con columnas nombre, lat, lon (separador coma o punto y coma). Las instituciones educativas de OSM (colegios, jardines, institutos y universidades) llegan desmarcadas; «Solo instituciones educativas» las activa como destinos y apaga el resto. Si la red se descargó antes de esta capa, vuelve a descargarla para incluirlas.</p>
+    </section>
+
+    <section id="secPop">
+      <h2>Población <small id="popSmall"></small></h2>
+      <div class="row">
+        <span class="btn file">Cargar CSV o GeoJSON<input type="file" id="filePop" accept=".csv,.txt,.json,.geojson,application/json"></span>
+        <button id="btnPopClear" hidden>Quitar población</button>
+      </div>
+      <div class="grid2" id="popFields" hidden>
+        <label class="f">Campo de población total<select id="selPopTot"></select></label>
+        <label class="f">Campo con movilidad reducida<select id="selPopPmr"></select></label>
+      </div>
+      <div class="status" id="popStatus">Sin población cargada: los resultados se expresan como porcentaje del área con red.</div>
+      <p class="hint">CSV con columnas lat, lon y una o dos de población (total y, si la hay, movilidad reducida), o GeoJSON en EPSG:4326 con puntos (manzanas, centros poblados) o polígonos (veredas, secciones). Los polígonos se reparten por igual entre las celdas con red.</p>
+    </section>
+
+    <section id="secProf">
+      <h2>Perfiles de viaje</h2>
+      <div class="grid2">
+        <label class="f">Minimizar<select id="selCrit"><option value="t">Tiempo</option><option value="g">Costo generalizado</option></select></label>
+        <label class="f">Celda de análisis (m)<input type="number" id="inCell" min="25" max="500" step="25" value="100"></label>
+        <label class="f">SMMLV (COP)<input type="number" id="inSMMLV" step="1000" value="1750905"></label>
+        <label class="f">Horas laborales/mes<input type="number" id="inHoras" step="1" value="180"></label>
+        <label class="f">Suavizado del DEM (m)<input type="number" id="inSuav" min="0" max="200" step="10" value="40"></label>
+        <label class="f">Red de bus<select id="selBusRed"><option value="ambas" selected>Rutas de OSM y vías arteriales</option><option value="osm">Solo rutas de OSM</option><option value="arterial">Solo vías arteriales</option></select></label>
+      </div>
+      <p class="hint" id="votTxt"></p>
+      <div id="profList" style="display:flex;flex-direction:column;gap:6px"></div>
+      <div class="row"><button id="btnAddProf">Duplicar perfil activo</button><button class="primary" id="btnCalc">Calcular</button></div>
+      <div class="status" id="calcStatus">—</div>
+    </section>
+
+    <section id="secView">
+      <h2>Visualización</h2>
+      <div class="grid2">
+        <label class="f">Perfil<select id="selProf"></select></label>
+        <label class="f">Variable<select id="selMetric">
+          <option value="t">Tiempo de viaje</option>
+          <option value="d">Distancia recorrida</option>
+          <option value="m">Costo monetario</option>
+          <option value="g">Costo generalizado</option>
+          <option value="gap">Brecha de tiempo frente a…</option>
+        </select></label>
+        <label class="f" id="lblCmp">Comparar con<select id="selCmp"></select></label>
+        <label class="f">Cortes de banda<input type="text" id="inBands"></label>
+      </div>
+      <div class="row">
+        <label class="row hint"><input type="checkbox" id="chkGrid" checked> Superficie</label>
+        <label class="row hint"><input type="checkbox" id="chkNetColor"> Red coloreada</label>
+        <label class="row hint"><input type="checkbox" id="chkSteps" checked> Escaleras</label>
+        <label class="row hint"><input type="checkbox" id="chkNames" checked> Nombres de municipios</label>
+      </div>
+      <label class="f">Mapa base<select id="selBase">
+        <option value="claro" selected>Gris claro (Esri)</option>
+        <option value="calles">Callejero (Esri)</option>
+        <option value="esri">Imagen satelital (Esri)</option>
+        <option value="osm">OpenStreetMap (solo desde un servidor web)</option>
+        <option value="none">Sin mapa base</option>
+      </select></label>
+      <label class="f">Opacidad de la superficie<input type="range" id="rngOp" min="0.2" max="1" step="0.05" value="0.72"></label>
+    </section>
+
+    <section id="secCrono">
+      <h2>Cartograma de tiempo <small>un destino</small></h2>
+      <p class="hint">Radio = minutos por la red hasta un solo destino; ángulo = dirección desde ese destino. Los dos perfiles usan la misma escala y los mismos colores (la banda de tiempo del primer perfil), para ver cuánto se encoge el territorio para el segundo.</p>
+      <div class="grid2">
+        <label class="f">Destino<select id="selCronoDest"></select></label>
+        <label class="f">Escala máxima (min)<input type="number" id="inCronoT" min="10" max="180" step="5" value="60"></label>
+        <label class="f">Perfil de referencia<select id="selCronoA"></select></label>
+        <label class="f">Perfil a comparar<select id="selCronoB"></select></label>
+      </div>
+      <div class="row"><button class="primary" id="btnCrono">Dibujar</button><button id="btnCronoPng" disabled>Descargar PNG</button></div>
+      <div class="status" id="cronoStatus">—</div>
+      <canvas id="cronoCv" width="1100" height="640" style="width:100%;max-width:100%;height:auto;display:none;border:1px solid var(--line);border-radius:4px;background:#fff"></canvas>
+    </section>
+
+    <section id="secRes">
+      <h2>Comparación de perfiles <small id="tblSmall">% del área con red</small></h2>
+      <label class="f" id="lblTbl" hidden>Expresar en<select id="selTbl"><option value="area">Porcentaje del área con red</option><option value="pob">Personas (población cargada)</option></select></label>
+      <div class="tablewrap"><table id="tblRes"></table></div>
+      <div class="grid2" id="origenFields">
+        <label class="f">Latitud del origen<input type="text" id="inpOLat" inputmode="decimal" placeholder="6,15500" autocomplete="off"></label>
+        <label class="f">Longitud del origen<input type="text" id="inpOLon" inputmode="decimal" placeholder="-75,37000" autocomplete="off"></label>
+      </div>
+      <div class="row"><button id="btnOrigen">Consultar origen</button></div>
+      <p class="hint">Si conoces las coordenadas del origen (grados decimales, EPSG:4326), escríbelas aquí; también puedes hacer clic en cualquier punto del mapa. Acepta coma o punto decimal y un par «lat, lon» pegado en el campo de latitud.</p>
+      <div class="row">
+        <button id="btnExpCSV">Grilla CSV</button>
+        <button id="btnExpASC">Ráster ASC (capa visible)</button>
+        <button id="btnExpDest">Destinos GeoJSON</button>
+        <button id="btnExpParams">Parámetros</button>
+        <button class="primary" id="btnExpInforme">Informe (HTML)</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>Supuestos</h2>
+      <p class="note">Velocidad peatonal ajustada por pendiente con la función de Tobler; en silla de ruedas, pérdida lineal de velocidad en subida. Sobre la pendiente máxima del perfil el tiempo del tramo se multiplica (por defecto ×3) en lugar de bloquearse, y la elevación se suaviza sobre la red antes de calcular pendientes. Las escaleras, vías sin andén y superficies sin pavimento multiplican el tiempo según el perfil. El taxi usa la tarifa básica de Medellín vigente desde febrero de 2026 como referencia; el recargo del taxi accesible y la velocidad del bus son supuestos editables. El pasaje de bus corresponde a las rutas veredales de Rionegro publicadas para 2025. El valor del tiempo es el SMMLV dividido por las horas laborales del mes.</p>
+    </section>
+  </aside>
+
+  <main class="mapwrap">
+    <div id="map"></div>
+    <div class="banner" id="banner" hidden></div>
+    <div class="legend" id="legend" hidden></div>
+    <div class="query" id="query" hidden></div>
+  </main>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script>
+'use strict';
+/* =================== utilidades =================== */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmtMin=s=>!isFinite(s)?'sin acceso':(s/60<10?(s/60).toFixed(1):Math.round(s/60))+' min';
+const fmtKm=m=>!isFinite(m)?'—':(m<1000?Math.round(m)+' m':(m/1000).toFixed(2)+' km');
+const fmtCOP=c=>!isFinite(c)?'—':'$'+Math.round(c).toLocaleString('es-CO');
+const fmtPct=x=>isFinite(x)?(x*100).toFixed(x<0.1?1:0)+'%':'—';
+const tick=()=>new Promise(r=>setTimeout(r,0));
+function hav(a1,o1,a2,o2){const R=6371008.8,r=Math.PI/180,dA=(a2-a1)*r,dO=(o2-o1)*r;const h=Math.sin(dA/2)**2+Math.cos(a1*r)*Math.cos(a2*r)*Math.sin(dO/2)**2;return 2*R*Math.asin(Math.min(1,Math.sqrt(h)));}
+let toastT;function toast(m){const t=$('#toast');t.textContent=m;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,3500);}
+const capCache={};
+function cap(name){if(!window.claude||typeof window.claude.use!=='function')return Promise.resolve(null);return capCache[name]||(capCache[name]=Promise.resolve(window.claude.use(name)).catch(()=>null));}
+const inArtifact=()=>!!(window.claude&&typeof window.claude.use==='function');
+function css(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim();}
+
+/* =================== modelo de red =================== */
+const CLS=['motorway','trunk','primary','secondary','tertiary','unclassified','residential','living_street','service','track','road','footway','path','pedestrian','steps','cycleway','bridleway','corridor','other'];
+const CI=Object.fromEntries(CLS.map((c,i)=>[c,i]));
+const MAJOR=new Set([0,1,2,3,4]);const PATHS=new Set([11,12,13,14,15,16,17]);
+const F={STEPS:1,NOSIDE:2,UNPAVED:4,NOFOOT:8,NOCAR:16,BUS:32,LINK:64,NOWHEEL:128,ART:256};
+const VCAR={motorway:70,trunk:55,primary:40,secondary:35,tertiary:30,unclassified:25,residential:20,living_street:10,service:12,track:12,road:20,other:15};
+const SKIP=new Set(['construction','proposed','raceway','bus_guideway','platform','elevator','abandoned','disused','escape','rest_area','services','emergency_bay','razed','no']);
+const UNP=new Set(['unpaved','gravel','dirt','ground','grass','sand','mud','compacted','fine_gravel','pebblestone','earth','rock','woodchips','grass_paver']);
+const NOCARCLS=new Set(['footway','path','pedestrian','steps','cycleway','bridleway','corridor','other']);
+const DEFAULT_DEST=/^(hospital|clinic|rehabilitation|physiotherapist)$/;
+const EDU_DEST=/^(school|kindergarten|college|university)$/;  // capa de instituciones educativas (desmarcada por defecto)
+const isEdu=d=>EDU_DEST.test(d.tipo||'');
+
+const S={net:null,dests:[],res:{},grid:null,addMode:false,busy:false,layers:{},queryLL:null,pop:null,popRaw:null,popGrid:null,tblBase:'area'};
+
+function makeNet(o){
+  const N=o.lat.length,M=o.ea.length;
+  const net={name:o.name,source:o.source,N,M,lat:Float64Array.from(o.lat),lon:Float64Array.from(o.lon),
+    elev:o.elev?Float32Array.from(o.elev,v=>v==null?NaN:v):new Float32Array(N).fill(NaN),
+    ea:Int32Array.from(o.ea),eb:Int32Array.from(o.eb),cls:Uint8Array.from(o.cls),flags:Uint16Array.from(o.flags),
+    vmax:Float32Array.from(o.vmax||new Array(M).fill(0)),ow:Int8Array.from(o.ow||new Array(M).fill(0)),
+    boundary:o.boundary||[],bnames:o.bnames||[],osmDests:o.osmDests||[],busHeur:false};
+  net.len=new Float32Array(M);
+  for(let e=0;e<M;e++)net.len[e]=Math.max(0.5,hav(net.lat[net.ea[e]],net.lon[net.ea[e]],net.lat[net.eb[e]],net.lon[net.eb[e]]));
+  // adyacencia CSR: para el nodo u, vecino v por la arista e; dir=1 si el viajero va de a→b para llegar a u
+  const deg=new Int32Array(N+1);
+  for(let e=0;e<M;e++){if(net.ea[e]===net.eb[e])continue;deg[net.ea[e]+1]++;deg[net.eb[e]+1]++;}
+  for(let i=0;i<N;i++)deg[i+1]+=deg[i];
+  const off=deg,pos=off.slice(0,N),adjN=new Int32Array(off[N]),adjE=new Int32Array(off[N]),adjD=new Uint8Array(off[N]);
+  for(let e=0;e<M;e++){const a=net.ea[e],b=net.eb[e];if(a===b)continue;
+    let k=pos[b]++;adjN[k]=a;adjE[k]=e;adjD[k]=1;
+    k=pos[a]++;adjN[k]=b;adjE[k]=e;adjD[k]=0;}
+  Object.assign(net,{off,adjN,adjE,adjD});
+  // componentes conexas (no dirigidas) para anclar destinos y celdas a la red principal
+  const comp=new Int32Array(N).fill(-1),sizes=[];const st=new Int32Array(N);
+  for(let i=0;i<N;i++){if(comp[i]>=0)continue;const c=sizes.length;let sp=0,n=0;st[sp++]=i;comp[i]=c;
+    while(sp){const u=st[--sp];n++;for(let k=off[u];k<off[u+1];k++){const v=adjN[k];if(comp[v]<0){comp[v]=c;st[sp++]=v;}}}sizes.push(n);}
+  const minSize=Math.max(30,Math.round(N*0.002));
+  net.main=new Uint8Array(N);for(let i=0;i<N;i++)net.main[i]=sizes[comp[i]]>=minSize?1:0;
+  // nodos que tocan al menos un tramo transitable en vehículo / a pie (para anclar destinos y celdas según el modo)
+  net.carNode=new Uint8Array(N);net.footNode=new Uint8Array(N);
+  for(let e=0;e<M;e++){const f=net.flags[e];
+    if(!(f&F.NOCAR)){net.carNode[net.ea[e]]=1;net.carNode[net.eb[e]]=1;}
+    if(!(f&F.NOFOOT)){net.footNode[net.ea[e]]=1;net.footNode[net.eb[e]]=1;}}
+  // bbox
+  let a0=90,a1=-90,o0=180,o1=-180;for(let i=0;i<N;i++){const a=net.lat[i],o=net.lon[i];if(a<a0)a0=a;if(a>a1)a1=a;if(o<o0)o0=o;if(o>o1)o1=o;}
+  net.bbox=[a0,o0,a1,o1];
+  // índice espacial (cubetas de ~150 m)
+  const lat0=(a0+a1)/2,bm=150,dA=bm/111320,dO=bm/(111320*Math.cos(lat0*Math.PI/180));
+  const bw=Math.max(1,Math.ceil((o1-o0)/dO)+1),bh=Math.max(1,Math.ceil((a1-a0)/dA)+1);
+  const cnt=new Int32Array(bw*bh+1);const key=i=>Math.floor((net.lat[i]-a0)/dA)*bw+Math.floor((net.lon[i]-o0)/dO);
+  for(let i=0;i<N;i++)cnt[key(i)+1]++;for(let i=0;i<bw*bh;i++)cnt[i+1]+=cnt[i];
+  const bp=cnt.slice(0,bw*bh),items=new Int32Array(N);for(let i=0;i<N;i++)items[bp[key(i)]++]=i;
+  net.bk={a0,o0,dA,dO,bw,bh,off:cnt,items,bm};
+  // Bus: F.BUS = tramo de una ruta de bus de OSM; F.ART = vía arterial (aproximación). La red de bus que usa el cálculo se elige en el panel.
+  let anyBus=false;for(let e=0;e<M;e++){if(net.flags[e]&F.BUS)anyBus=true;const c=net.cls[e];if(c>=1&&c<=4&&!(net.flags[e]&F.NOCAR))net.flags[e]|=F.ART;}
+  net.busHeur=!anyBus;
+  return net;
+}
+// k vecinos más cercanos dentro de radio r (m); onlyMain filtra a la red principal
+function nearest(lat,lon,r,k,onlyMain,mask){
+  const n=S.net,b=n.bk;const cy=Math.floor((lat-b.a0)/b.dA),cx=Math.floor((lon-b.o0)/b.dO),rr=Math.ceil(r/b.bm);
+  const out=[];
+  for(let y=cy-rr;y<=cy+rr;y++){if(y<0||y>=b.bh)continue;for(let x=cx-rr;x<=cx+rr;x++){if(x<0||x>=b.bw)continue;const c=y*b.bw+x;
+    for(let j=b.off[c];j<b.off[c+1];j++){const i=b.items[j];if(onlyMain&&!n.main[i])continue;if(mask&&!mask[i])continue;
+      const dy=(n.lat[i]-lat)*111320,dx=(n.lon[i]-lon)*111320*Math.cos(lat*Math.PI/180);const d=Math.hypot(dx,dy);
+      if(d<=r)out.push([d,i]);}}}
+  out.sort((p,q)=>p[0]-q[0]);return out.slice(0,k);
+}
+
+/* =================== lectura de Overpass =================== */
+function parseOverpass(js,name){
+  const els=js.elements||[];const ll=new Map(),ways=[],busW=new Set(),dests=new Map();const bRels=[];
+  const addD=(lat,lon,t,id)=>{if(lat==null||dests.has(id))return;const tipo=t.healthcare||t.amenity||'salud';
+    dests.set(id,{id,name:t.name||t['name:es']||tipo,tipo,lat,lon,on:DEFAULT_DEST.test(t.amenity||'')||DEFAULT_DEST.test(t.healthcare||''),origen:'osm'});};
+  for(const e of els){
+    if(e.type==='node'){ll.set(e.id,[e.lat,e.lon]);if(e.tags&&(e.tags.amenity||e.tags.healthcare))addD(e.lat,e.lon,e.tags,'n'+e.id);}
+    else if(e.type==='way'){
+      if(e.nodes&&e.tags&&e.tags.highway)ways.push(e);
+      else if(!e.tags&&!e.nodes)busW.add(e.id);
+      if(e.tags&&(e.tags.amenity||e.tags.healthcare)&&e.center)addD(e.center.lat,e.center.lon,e.tags,'w'+e.id);}
+    else if(e.type==='relation'){
+      if(e.tags&&e.tags.boundary==='administrative'&&e.members)bRels.push(e);
+      else if(e.tags&&(e.tags.amenity||e.tags.healthcare)&&e.center)addD(e.center.lat,e.center.lon,e.tags,'r'+e.id);}
+  }
+  const idx=new Map(),lat=[],lon=[],ea=[],eb=[],cls=[],flags=[],vmax=[],ow=[];
+  const ni=id=>{let i=idx.get(id);if(i===undefined){const p=ll.get(id);if(!p)return -1;i=lat.length;idx.set(id,i);lat.push(p[0]);lon.push(p[1]);}return i;};
+  for(const w of ways){const t=w.tags;let hw=t.highway;if(SKIP.has(hw))continue;
+    let f=0;if(hw.endsWith('_link')){f|=F.LINK;hw=hw.slice(0,-5);}
+    if(hw==='sidewalk'||hw==='crossing')hw='footway';
+    const c=CI[hw]!==undefined?CI[hw]:CI.other;
+    if(hw==='steps')f|=F.STEPS;
+    const sw=t.sidewalk||t['sidewalk:both'];
+    if(sw==='no'||sw==='none'||hw==='motorway'||(hw==='trunk'&&!sw))f|=F.NOSIDE;
+    const acc=t.access,fo=t.foot,okF=['yes','designated','permissive'].includes(fo);
+    if(fo==='no'||hw==='motorway'||((acc==='no'||acc==='private')&&!okF))f|=F.NOFOOT;
+    if(NOCARCLS.has(hw)||t.motor_vehicle==='no'||t.motorcar==='no'||acc==='no'||acc==='private')f|=F.NOCAR;
+    if(UNP.has(t.surface)||(!t.surface&&(hw==='track'||hw==='path')))f|=F.UNPAVED;
+    if(t.wheelchair==='no')f|=F.NOWHEEL;
+    if(busW.has(w.id))f|=F.BUS;
+    const vm=parseFloat(t.maxspeed);const o=(t.oneway==='yes'||t.oneway==='1'||t.oneway==='true'||t.junction==='roundabout')?1:(t.oneway==='-1'?-1:0);
+    let prev=-1;for(const nid of w.nodes){const i=ni(nid);if(i<0){prev=-1;continue;}
+      if(prev>=0&&prev!==i){ea.push(prev);eb.push(i);cls.push(c);flags.push(f);vmax.push(isFinite(vm)?vm:0);ow.push(o);}prev=i;}
+  }
+  let boundary=[];
+  // Un mismo nombre puede traer relaciones anidadas (p. ej. nivel 6 del municipio y nivel 8 de un corregimiento): se conserva solo la de
+  // menor nivel, porque los anillos anidados se anularían entre sí con la regla par-impar de la grilla.
+  const mejor=new Map();for(const r of bRels){const nm=(r.tags&&r.tags.name)||String(r.id),lv=+((r.tags&&r.tags.admin_level)||99),c=mejor.get(nm);if(!c||lv<c.lv)mejor.set(nm,{lv,r});}
+  const bnames=[];
+  for(const {r:bRel} of mejor.values()){ // un anillo (o varios) por municipio; los municipios vecinos comparten borde pero no se solapan
+    const lines=bRel.members.filter(m=>m.type==='way'&&m.geometry&&(m.role==='outer'||m.role===''))
+      .map(m=>m.geometry.map(g=>[g.lat,g.lon]));const rings=assembleRings(lines);boundary.push(...rings);
+    const nm=bRel.tags&&(bRel.tags.name||bRel.tags['name:es']);if(nm&&rings.length){const big=rings.reduce((a,b)=>ringArea(b)>ringArea(a)?b:a),c=ringCentroid(big);bnames.push({name:nm,lat:c[0],lon:c[1]});}}
+  if(!ea.length)throw new Error('El archivo no contiene vías (highway). Revisa el nombre del municipio o la consulta.');
+  return {name,source:'osm',lat,lon,ea,eb,cls,flags,vmax,ow,boundary,bnames,osmDests:[...dests.values()]};
+}
+function ringArea(r){let a=0;for(let i=0,j=r.length-1;i<r.length;j=i++)a+=(r[j][1]*r[i][0]-r[i][1]*r[j][0]);return Math.abs(a/2);}
+function ringCentroid(r){let a=0,cy=0,cx=0;for(let i=0,j=r.length-1;i<r.length;j=i++){const f=r[j][1]*r[i][0]-r[i][1]*r[j][0];a+=f;cx+=(r[j][1]+r[i][1])*f;cy+=(r[j][0]+r[i][0])*f;}
+  if(Math.abs(a)<1e-18){let sy=0,sx=0;for(const q of r){sy+=q[0];sx+=q[1];}return [sy/r.length,sx/r.length];}
+  return [cy/(3*a),cx/(3*a)];}
+function assembleRings(lines){
+  const eq=(p,q)=>Math.abs(p[0]-q[0])<1e-7&&Math.abs(p[1]-q[1])<1e-7,last=a=>a[a.length-1];
+  const pool=lines.filter(l=>l.length>1).map(l=>l.slice()),rings=[];
+  while(pool.length){let r=pool.shift(),ch=true;
+    while(ch&&!eq(r[0],last(r))){ch=false;
+      for(let i=0;i<pool.length;i++){const l=pool[i];
+        if(eq(last(r),l[0]))r=r.concat(l.slice(1));else if(eq(last(r),last(l)))r=r.concat(l.slice().reverse().slice(1));
+        else if(eq(r[0],last(l)))r=l.concat(r.slice(1));else if(eq(r[0],l[0]))r=l.slice().reverse().concat(r.slice(1));else continue;
+        pool.splice(i,1);ch=true;break;}}
+    if(r.length>3)rings.push(r);}
+  return rings;
+}
+
+/* =================== serialización compacta =================== */
+function serializeNet(){
+  const n=S.net;const r6=x=>Math.round(x*1e6);
+  return JSON.stringify({v:1,name:n.name,source:n.source,lat:Array.from(n.lat,r6),lon:Array.from(n.lon,r6),
+    elev:Array.from(n.elev,z=>z===z?Math.round(z*10):null),ea:Array.from(n.ea),eb:Array.from(n.eb),cls:Array.from(n.cls),
+    flags:Array.from(n.flags,(f,e)=>n.busHeur?f&~F.BUS:f),vmax:Array.from(n.vmax),ow:Array.from(n.ow),
+    boundary:n.boundary.map(r=>r.map(p=>[+p[0].toFixed(6),+p[1].toFixed(6)])),bnames:n.bnames||[],osmDests:n.osmDests});
+}
+function deserializeNet(j){
+  return {name:j.name,source:j.source,lat:j.lat.map(x=>x/1e6),lon:j.lon.map(x=>x/1e6),elev:j.elev.map(z=>z==null?null:z/10),
+    ea:j.ea,eb:j.eb,cls:j.cls,flags:j.flags,vmax:j.vmax,ow:j.ow,boundary:j.boundary||[],bnames:j.bnames||[],osmDests:j.osmDests||[]};
+}
+
+/* =================== red sintética de demostración =================== */
+function demoNet(){
+  let seed=7;const rnd=()=>((seed=(seed*16807)%2147483647)/2147483647);
+  const C=[6.1520,-75.3760],nx=34,ny=28,sp=85,dA=sp/111320,dO=sp/(111320*Math.cos(C[0]*Math.PI/180));
+  const lat=[],lon=[],elev=[],ea=[],eb=[],cls=[],flags=[],vmax=[],ow=[];const id=(x,y)=>y*nx+x;
+  for(let y=0;y<ny;y++)for(let x=0;x<nx;x++){const u=x/(nx-1),v=y/(ny-1);
+    lat.push(C[0]+(y-ny/2)*dA+(rnd()-.5)*dA*.25);lon.push(C[1]+(x-nx/2)*dO+(rnd()-.5)*dO*.25);
+    elev.push(2125+70*Math.exp(-((u-.78)**2+(v-.72)**2)/.035)+35*Math.exp(-((u-.2)**2+(v-.85)**2)/.02)+6*Math.sin(u*9)+4*Math.cos(v*7));}
+  const add=(a,b,c,f,o)=>{ea.push(a);eb.push(b);cls.push(CI[c]);flags.push(f);vmax.push(0);ow.push(o||0);};
+  for(let y=0;y<ny;y++)for(let x=0;x<nx;x++){const u=x/(nx-1),v=y/(ny-1),edge=u<.12||u>.93||v<.1||v>.92;
+    if(x<nx-1){let c='residential',f=0,o=0;if(y===11){c='trunk';f|=F.NOSIDE|F.BUS;}else if(y===20)c='tertiary';
+      else if(y%3===0&&!edge)o=(y%6===0)?1:-1;if(edge&&y!==11){c='track';f|=F.UNPAVED;}
+      if(y!==11&&y!==20&&rnd()<.07)continue;add(id(x,y),id(x+1,y),c,f,o);}
+    if(y<ny-1){let c='residential',f=0;if(x===17){c='primary';f|=F.BUS;}else if(x===6)c='secondary';
+      if(edge&&x!==17){c='track';f|=F.UNPAVED;}
+      const hill=Math.hypot(u-.78,v-.72)<.16;if(hill&&x%3===1){c='steps';f=F.STEPS|F.NOCAR;}
+      if(x!==17&&x!==6&&rnd()<.07)continue;add(id(x,y),id(x,y+1),c,f,0);}
+    if(x<nx-1&&y<ny-1&&rnd()<.05)add(id(x,y),id(x+1,y+1),'footway',F.NOCAR,0);}
+  const a0=C[0]-(ny/2-1)*dA,a1=C[0]+(ny/2-2)*dA,o0=C[1]-(nx/2-1)*dO,o1=C[1]+(nx/2-2)*dO;
+  const boundary=[[[a0,o0],[a0,o1-6*dO],[a0+5*dA,o1],[a1,o1],[a1,o0+8*dO],[a1-6*dA,o0],[a0,o0]]];
+  const P=(x,y)=>[lat[id(x,y)],lon[id(x,y)]];
+  const osmDests=[{id:'d1',name:'Hospital (ejemplo)',tipo:'hospital',lat:P(9,9)[0],lon:P(9,9)[1],on:true,origen:'osm'},
+    {id:'d2',name:'Centro de rehabilitación (ejemplo)',tipo:'rehabilitation',lat:P(24,16)[0],lon:P(24,16)[1],on:true,origen:'osm'},
+    {id:'d3',name:'IPS (ejemplo)',tipo:'clinic',lat:P(14,22)[0],lon:P(14,22)[1],on:false,origen:'osm'},
+    {id:'d4',name:'Colegio (ejemplo)',tipo:'school',lat:P(30,6)[0],lon:P(30,6)[1],on:false,origen:'osm'}];
+  return {name:'Red sintética de demostración',source:'demo',lat,lon,elev,ea,eb,cls,flags,vmax,ow,boundary,osmDests};
+}
+
+/* =================== perfiles =================== */
+const PDEF={grupo:'ref',modo:'pie',marcha:'pie',v0:4.8,pendMax:100,pendModo:'penalizar',penPend:3,kSub:6,esc:1.5,sinAnden:1,sinPav:1.1,fVel:1,terminal:0,fijo:0,minima:0,cKm:0,cMin:0,vBus:18,espera:10,abordaje:0.5,tarifa:3400,personas:1,on:true};
+const COLORS=['#0f6a73','#c2410c','#7c3aed','#b45309','#0369a1','#be185d','#4d7c0f','#57534e','#0e7490','#9f1239'];
+let PROFILES=[
+  {id:'p_ref',nombre:'A pie, sin limitación',grupo:'ref',modo:'pie',v0:4.8,pendMax:100,esc:1.5,sinAnden:1,sinPav:1.1},
+  {id:'p_mayor',nombre:'A pie, adulto mayor',grupo:'pmr',modo:'pie',v0:3.2,pendMax:25,esc:3,sinAnden:1.3,sinPav:1.4},
+  {id:'p_baston',nombre:'Bastón o andador',grupo:'pmr',modo:'pie',v0:2.2,pendMax:15,esc:5,sinAnden:1.5,sinPav:1.8},
+  {id:'p_silla',nombre:'Silla de ruedas manual',grupo:'pmr',modo:'silla',v0:3.2,pendMax:12,kSub:6,esc:0,sinAnden:2,sinPav:2.5,personas:2},
+  {id:'p_sillam',nombre:'Silla de ruedas motorizada',grupo:'pmr',modo:'silla',v0:5,pendMax:15,kSub:3,esc:0,sinAnden:1.5,sinPav:1.6,on:false},
+  {id:'v_ref',nombre:'Taxi, sin limitación',grupo:'ref',modo:'vehiculo',v0:4.8,terminal:5,fijo:5900,minima:8300,cKm:2439},
+  {id:'v_pmr',nombre:'Taxi accesible, silla de ruedas',grupo:'pmr',modo:'vehiculo',v0:3.2,terminal:20,fijo:15900,minima:18300,cKm:2439,personas:2},
+  {id:'b_ref',nombre:'Bus y caminata, sin limitación',grupo:'ref',modo:'bus',marcha:'pie',v0:4.8,pendMax:100,esc:1.5,sinAnden:1,sinPav:1.1,espera:10,abordaje:0.5},
+  {id:'b_pmr',nombre:'Bus y silla de ruedas',grupo:'pmr',modo:'bus',marcha:'silla',v0:3.2,pendMax:12,kSub:6,esc:0,sinAnden:2,sinPav:2.5,espera:25,abordaje:3,personas:2},
+].map((p,i)=>({...PDEF,...p,color:COLORS[i%COLORS.length]}));
+const MODOS={pie:'A pie',silla:'Silla de ruedas',vehiculo:'Vehículo (taxi)',bus:'Bus + marcha'};
+const FIELDS=[
+  ['v0','Velocidad en plano','km/h',p=>p.modo!=='vehiculo'],['v0','Velocidad de acceso a pie','km/h',p=>p.modo==='vehiculo'],
+  ['pendMax','Pendiente máxima','%',p=>p.modo!=='vehiculo'],['penPend','Tiempo × sobre la pendiente máxima','×',p=>p.modo!=='vehiculo'&&p.pendModo!=='bloquear'],['kSub','Pérdida por pendiente en subida','×',p=>marchaOf(p)==='silla'],
+  ['esc','Escaleras (0 = no puede)','× tiempo',p=>p.modo!=='vehiculo'],['sinAnden','Vía sin andén','× tiempo',p=>p.modo!=='vehiculo'],
+  ['sinPav','Sin pavimento','× tiempo',p=>p.modo!=='vehiculo'],['fVel','Factor de velocidad','×',p=>p.modo==='vehiculo'],
+  ['terminal','Espera y abordaje','min',p=>p.modo==='vehiculo'],['fijo','Banderazo y recargos','COP',p=>p.modo==='vehiculo'],
+  ['minima','Carrera mínima','COP',p=>p.modo==='vehiculo'],['cKm','Costo por km','COP',p=>p.modo==='vehiculo'],
+  ['cMin','Costo por minuto','COP',p=>p.modo==='vehiculo'],['vBus','Velocidad del bus','km/h',p=>p.modo==='bus'],
+  ['espera','Espera en paradero','min',p=>p.modo==='bus'],['abordaje','Abordaje y descenso','min',p=>p.modo==='bus'],
+  ['tarifa','Pasaje por persona','COP',p=>p.modo==='bus'],['personas','Personas que viajan','n',()=>true]];
+const marchaOf=p=>p.modo==='bus'?p.marcha:(p.modo==='vehiculo'?null:p.modo);
+const P=()=>({crit:$('#selCrit').value,cell:Math.max(25,+$('#inCell').value||100),smmlv:+$('#inSMMLV').value||0,horas:+$('#inHoras').value||180,suav:Math.max(0,+$('#inSuav').value||0),busRed:$('#selBusRed').value});
+const votSec=()=>{const p=P();return p.smmlv/p.horas/3600;};
+
+/* =================== costos por arista =================== */
+const T0=Math.exp(-3.5*0.05);
+// Pendiente sobre el máximo del perfil: por defecto se penaliza (tiempo × penPend) y no se bloquea. Con un DEM de 10–30 m,
+// bloquear tramos por pendiente fragmenta la red por ruido del DEM (en Rionegro, la red alcanzable a pie con bastón pasó de 88 % a 12 %).
+function walkT(L,g,v0,mult,p,marcha){
+  if(Math.abs(g)*100>p.pendMax){if(p.pendModo==='bloquear')return Infinity;mult*=p.penPend>0?p.penPend:1;}
+  let fv;if(marcha==='silla')fv=g>0?Math.max(0.15,1-p.kSub*g):Math.max(0.5,1+3*g);
+  else fv=Math.exp(-3.5*Math.abs(g+0.05))/T0;
+  return L/(v0*fv)*mult;
+}
+// Elevación suavizada: promedio de los nodos a ≤ R metros por la red. Reduce el ruido del DEM sin tocar las pendientes sostenidas.
+function elevSmooth(n,R){
+  if(!(R>0))return n.elev;
+  if(n.elevS&&n.elevSR===R&&n.elevSsrc===n.elev)return n.elevS;
+  const N=n.N,out=new Float32Array(N),dist=new Float32Array(N).fill(1e9),{off,adjN,adjE,len}=n,q=new Int32Array(N);
+  for(let s=0;s<N;s++){let sum=0,cnt=0,h=0,t=0;q[t++]=s;dist[s]=0;
+    while(h<t){const u=q[h++],z=n.elev[u];if(z===z){sum+=z;cnt++;}
+      for(let k=off[u];k<off[u+1];k++){const v=adjN[k],d=dist[u]+len[adjE[k]];if(d<=R&&d<dist[v]){if(dist[v]>=1e9&&t<N)q[t++]=v;dist[v]=d;}}}
+    out[s]=cnt?sum/cnt:NaN;for(let i=0;i<t;i++)dist[q[i]]=1e9;}
+  n.elevS=out;n.elevSR=R;n.elevSsrc=n.elev;return out;
+}
+function walkCosts(p,marcha){
+  const n=S.net,M=n.M,ab=new Float32Array(M),ba=new Float32Array(M),v0=Math.max(0.1,p.v0)/3.6,Z=elevSmooth(n,P().suav);
+  for(let e=0;e<M;e++){const f=n.flags[e];
+    if((f&F.NOFOOT)||(marcha==='silla'&&(f&F.NOWHEEL))||((f&F.STEPS)&&p.esc<=0)){ab[e]=ba[e]=Infinity;continue;}
+    let mult=1;if(f&F.STEPS)mult*=p.esc;if(f&F.NOSIDE)mult*=p.sinAnden;if(f&F.UNPAVED)mult*=p.sinPav;
+    const L=n.len[e],za=Z[n.ea[e]],zb=Z[n.eb[e]];let g=0;
+    if(za===za&&zb===zb&&!(f&F.STEPS)){g=Math.max(-0.4,Math.min(0.4,(zb-za)/Math.max(L,20)));}
+    ab[e]=walkT(L,g,v0,mult,p,marcha);ba[e]=walkT(L,-g,v0,mult,p,marcha);}
+  return {ab,ba};
+}
+const busMaskOf=m=>m==='osm'?F.BUS:m==='arterial'?F.ART:(F.BUS|F.ART);
+function vehCosts(p,busOnly){
+  const n=S.net,M=n.M,ab=new Float32Array(M),ba=new Float32Array(M),busMask=busMaskOf(P().busRed);
+  for(let e=0;e<M;e++){const f=n.flags[e];
+    if((f&F.NOCAR)||(busOnly&&!(f&busMask))){ab[e]=ba[e]=Infinity;continue;}
+    let v;if(busOnly)v=p.vBus;else{const c=CLS[n.cls[e]];v=VCAR[c]||20;if(f&F.LINK)v*=0.7;if(n.vmax[e]>0)v=Math.min(v*1.4,n.vmax[e]*0.7);if(f&F.UNPAVED)v*=0.6;v*=p.fVel;}
+    const t=n.len[e]/(Math.max(1,v)/3.6);ab[e]=t;ba[e]=t;
+    if(n.ow[e]===1)ba[e]=Infinity;else if(n.ow[e]===-1)ab[e]=Infinity;}
+  return {ab,ba};
+}
+
+/* =================== Dijkstra inverso multi-fuente =================== */
+class Heap{constructor(n){this.k=new Float64Array(n);this.v=new Int32Array(n);this.n=0;}
+  push(key,val){if(this.n>=this.k.length){const k=new Float64Array(this.k.length*2),v=new Int32Array(this.k.length*2);k.set(this.k);v.set(this.v);this.k=k;this.v=v;}
+    let i=this.n++;while(i>0){const q=(i-1)>>1;if(this.k[q]<=key)break;this.k[i]=this.k[q];this.v[i]=this.v[q];i=q;}this.k[i]=key;this.v[i]=val;}
+  pop(){const top=this.v[0];this.top=this.k[0];const n=--this.n;
+    if(n>0){const key=this.k[n],val=this.v[n];let i=0;for(;;){let c=2*i+1;if(c>=n)break;if(c+1<n&&this.k[c+1]<this.k[c])c++;if(this.k[c]>=key)break;this.k[i]=this.k[c];this.v[i]=this.v[c];i=c;}this.k[i]=key;this.v[i]=val;}
+    return top;}}
+function solve(p,destNodes){
+  const n=S.net,N=n.N,bus=p.modo==='bus',veh=p.modo==='vehiculo',LN=bus?2:1,SZ=N*LN;
+  const base=veh?vehCosts(p,false):walkCosts(p,marchaOf(p)),bc=bus?vehCosts(p,true):null;
+  let nodeBus=null;if(bus){nodeBus=new Uint8Array(N);for(let e=0;e<n.M;e++)if(bc.ab[e]<Infinity||bc.ba[e]<Infinity){nodeBus[n.ea[e]]=1;nodeBus[n.eb[e]]=1;}}
+  const W=new Float64Array(SZ).fill(Infinity),T=new Float64Array(SZ).fill(Infinity),D=new Float64Array(SZ),Mo=new Float64Array(SZ);
+  const nx=new Int32Array(SZ).fill(-1),ne=new Int32Array(SZ).fill(-1);
+  const vot=votSec()*p.personas,crit=P().crit,h=new Heap(Math.max(1024,N));
+  for(const d of destNodes){W[d]=0;T[d]=0;h.push(0,d);}
+  const {off,adjN,adjE,adjD,len}=n;
+  const relax=(sv,s,w,t,dd,m,e)=>{if(w<W[sv]){W[sv]=w;T[sv]=T[s]+t;D[sv]=D[s]+dd;Mo[sv]=Mo[s]+m;nx[sv]=s;ne[sv]=e;h.push(w,sv);}};
+  while(h.n){const s=h.pop(),w=h.top;if(w>W[s])continue;const L=s>=N?1:0,u=s-L*N;
+    const AB=L?bc.ab:base.ab,BA=L?bc.ba:base.ba;
+    for(let k=off[u];k<off[u+1];k++){const e=adjE[k],t=adjD[k]?AB[e]:BA[e];if(t===Infinity)continue;
+      const m=veh?(p.cKm*len[e]/1000+p.cMin*t/60):0;
+      relax(adjN[k]+L*N,s,w+(crit==='g'?m+t*vot:t),t,len[e],m,e);}
+    if(bus){
+      if(L===0&&nodeBus[u]){const t=p.abordaje*60;relax(u+N,s,w+(crit==='g'?t*vot:t),t,0,0,-2);} // descenso (inverso)
+      else if(L===1){const t=(p.espera+p.abordaje)*60,m=p.tarifa*p.personas;relax(u,s,w+(crit==='g'?m+t*vot:t),t,0,m,-3);} // abordaje (inverso)
+    }}
+  const Tt=new Float32Array(N),Mt=new Float32Array(N),G=new Float32Array(N),Dt=new Float32Array(N);
+  for(let i=0;i<N;i++){if(T[i]===Infinity){Tt[i]=Mt[i]=G[i]=Dt[i]=Infinity;continue;}
+    const isD=T[i]===0&&nx[i]<0;
+    Tt[i]=T[i]+(veh&&!isD?p.terminal*60:0);Dt[i]=D[i];
+    Mt[i]=veh?(isD?0:Math.max(p.minima,Mo[i]+p.fijo)):Mo[i];G[i]=Mt[i]+Tt[i]*vot;}
+  return {T:Tt,D:Dt,M:Mt,G,nx,ne,N,vot};
+}
+
+/* =================== grilla de análisis =================== */
+function buildGrid(){
+  const n=S.net,cs=P().cell;const rings=n.boundary;
+  let [a0,o0,a1,o1]=n.bbox;
+  if(rings.length){a0=90;a1=-90;o0=180;o1=-180;for(const r of rings)for(const [a,o] of r){a0=Math.min(a0,a);a1=Math.max(a1,a);o0=Math.min(o0,o);o1=Math.max(o1,o);}}
+  const latc=(a0+a1)/2,dA=cs/111320,dO=cs/(111320*Math.cos(latc*Math.PI/180));
+  const cols=Math.ceil((o1-o0)/dO),rows=Math.ceil((a1-a0)/dA),NC=cols*rows;
+  if(NC>2.5e6)throw new Error('La grilla es demasiado grande; aumenta el tamaño de celda.');
+  const inside=new Uint8Array(NC);
+  if(rings.length){for(let r=0;r<rows;r++){const la=a1-(r+.5)*dA,xs=[];
+      for(const ring of rings)for(let i=0,j=ring.length-1;i<ring.length;j=i++){const [ya,xa]=ring[i],[yb,xb]=ring[j];
+        if((ya>la)!==(yb>la))xs.push(xa+(la-ya)/(yb-ya)*(xb-xa));}
+      xs.sort((p,q)=>p-q);for(let k=0;k+1<xs.length;k+=2){const c0=Math.max(0,Math.ceil((xs[k]-o0)/dO-.5)),c1=Math.min(cols-1,Math.floor((xs[k+1]-o0)/dO-.5));for(let c=c0;c<=c1;c++)inside[r*cols+c]=1;}}}
+  else inside.fill(1);
+  const K=4,snap=Math.max(cs*1.5,250),cn=new Int32Array(NC*K).fill(-1),cd=new Float32Array(NC*K);
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){const i=r*cols+c;if(!inside[i])continue;
+    const nn=nearest(a1-(r+.5)*dA,o0+(c+.5)*dO,snap,K,false);for(let k=0;k<nn.length;k++){cn[i*K+k]=nn[k][1];cd[i*K+k]=nn[k][0];}}
+  S.grid={a0,o0,a1,o1,dA,dO,cols,rows,NC,inside,cn,cd,K,cs};
+}
+function cellValues(p,r){
+  const g=S.grid,{NC,K,cn,cd}=g,vacc=Math.max(0.1,p.v0)/3.6;
+  const cT=new Float32Array(NC).fill(NaN),cD=new Float32Array(NC).fill(NaN),cM=new Float32Array(NC).fill(NaN),cG=new Float32Array(NC).fill(NaN),cNode=new Int32Array(NC).fill(-1);
+  const crit=P().crit;
+  for(let i=0;i<NC;i++){if(cn[i*K]<0)continue;let best=Infinity,bn=-1,bd=0;
+    for(let k=0;k<K;k++){const nd=cn[i*K+k];if(nd<0)break;const d=cd[i*K+k],ta=d/vacc;
+      const v=crit==='g'?r.G[nd]+ta*r.vot:r.T[nd]+ta;if(v<best){best=v;bn=nd;bd=d;}}
+    if(bn<0){ // los 4 nodos más cercanos no sirven a este modo (p. ej. todos son senderos para un taxi): buscar uno que sí
+      const row=Math.floor(i/g.cols),col=i%g.cols,nn=nearest(g.a1-(row+.5)*g.dA,g.o0+(col+.5)*g.dO,Math.max(g.cs*1.5,250),K,false,modeMask(p));
+      for(const [d,nd] of nn){const v=crit==='g'?r.G[nd]+d/vacc*r.vot:r.T[nd]+d/vacc;if(v<best){best=v;bn=nd;bd=d;}}}
+    if(bn<0){cT[i]=cD[i]=cM[i]=cG[i]=Infinity;continue;}
+    const ta=bd/vacc;cT[i]=r.T[bn]+ta;cD[i]=r.D[bn]+bd;cM[i]=r.M[bn];cG[i]=r.G[bn]+ta*r.vot;cNode[i]=bn;}
+  return {cT,cD,cM,cG,cNode};
+}
+function stats(c){
+  const n={tot:0,reach:0,t15:0,t30:0,t60:0,sT:0,sD:0,sM:0,sG:0};
+  for(let i=0;i<c.cT.length;i++){const t=c.cT[i];if(t!==t)continue;n.tot++;if(t===Infinity)continue;n.reach++;
+    const m=t/60;if(m<=15)n.t15++;if(m<=30)n.t30++;if(m<=60)n.t60++;n.sT+=t;n.sD+=c.cD[i];n.sM+=c.cM[i];n.sG+=c.cG[i];}
+  return {...n,mT:n.sT/n.reach,mD:n.sD/n.reach,mM:n.sM/n.reach,mG:n.sG/n.reach};
+}
+
+/* =================== cálculo =================== */
+let calcTimer=null;
+function scheduleCalc(ms=350){clearTimeout(calcTimer);calcTimer=setTimeout(runCalc,ms);}
+async function runCalc(){
+  if(!S.net)return;if(S.busy){S.pending=true;return;}S.busy=true;S.pending=false;$('#btnCalc').disabled=true;
+  const net=S.net;
+  try{
+    const dn=activeDestNodes();const res={};
+    if(!dn.length){S.res={};cronoReset();$('#calcStatus').textContent='Selecciona al menos un destino.';renderAll();return;}
+    if(!S.grid||S.grid.cs!==P().cell||S.grid.net!==net){$('#calcStatus').textContent='Preparando grilla…';await tick();buildGrid();S.grid.net=net;allocPop();}
+    else if(S.pop&&!S.popGrid)allocPop();
+    const act=PROFILES.filter(p=>p.on);const t0=performance.now();
+    for(let i=0;i<act.length;i++){const p=act[i];$('#calcStatus').textContent=`Calculando ${i+1}/${act.length}: ${p.nombre}…`;await tick();
+      if(S.net!==net||S.pending){S.pending=true;return;}
+      const r=solve(p,destNodesFor(p));const c=cellValues(p,r);res[p.id]={...r,...c,st:stats(c),ps:popStats(p,c)};}
+    S.res=res;const g=S.grid;
+    $('#calcStatus').textContent=`Listo: ${act.length} perfiles · ${dn.length} destinos · ${(g.cols*g.rows).toLocaleString('es-CO')} celdas de ${g.cs} m · ${((performance.now()-t0)/1000).toFixed(1)} s`;
+    renderAll();
+    if(S.crono&&$('#cronoCv').style.display!=='none')cronoDibujar(); // el cartograma debe reflejar siempre los parámetros vigentes
+    if(S.queryLL)doQuery(S.queryLL,false);
+  }catch(e){console.error(e);$('#calcStatus').textContent='Error: '+e.message;}
+  finally{S.busy=false;$('#btnCalc').disabled=false;if(S.pending)scheduleCalc(30);}
+}
+// El destino se ancla al nodo más cercano que el modo del perfil puede usar: si no, un hospital que
+// cae junto a un sendero peatonal desaparecería de los perfiles de vehículo (y viceversa).
+const modeMask=p=>p.modo==='vehiculo'?S.net.carNode:S.net.footNode;
+function destNodeOf(d,p){
+  const key=p.modo==='vehiculo'?'nodeCar':'nodeFoot';
+  if(d[key]==null){const nn=nearest(d.lat,d.lon,2000,1,true,modeMask(p));d[key]=nn.length?nn[0][1]:-1;d[key+'Snap']=nn.length?nn[0][0]:Infinity;}
+  return d[key];
+}
+function destNodesFor(p){
+  const out=new Set();
+  for(const d of S.dests){if(!d.on)continue;const nd=destNodeOf(d,p);if(nd>=0)out.add(nd);}
+  return [...out];
+}
+const activeDestNodes=()=>destNodesFor({modo:'pie'});
+
+/* =================== población =================== */
+// Puntos (centroides de manzana, nodos de una superficie de población) o polígonos (veredas, secciones) con población total y,
+// opcionalmente, población con movilidad reducida. Se reparten en las celdas de la grilla conservando el total: lo que cae
+// fuera del límite o en celdas sin red cercana se informa aparte, nunca se descarta.
+function popRawCSV(txt){
+  const lines=txt.replace(/^﻿/,'').split(/\r?\n/).filter(l=>l.trim());if(lines.length<2)throw new Error('El CSV de población está vacío.');
+  const sep=(lines[0].match(/;/g)||[]).length>(lines[0].match(/,/g)||[]).length?';':',';
+  const hd=lines[0].split(sep).map(s=>s.trim().replace(/"/g,''));
+  const low=hd.map(h=>h.toLowerCase());const iA=low.findIndex(h=>/^(lat|latitud|y)$/.test(h)),iO=low.findIndex(h=>/^(lon|lng|long|longitud|x)$/.test(h));
+  if(iA<0||iO<0)throw new Error('No encuentro columnas lat y lon en el CSV de población.');
+  const num=s=>{const v=parseFloat(String(s).replace(',','.'));return isFinite(v)?v:NaN;};
+  const rows=[];for(const l of lines.slice(1)){const c=l.split(sep).map(s=>s.trim().replace(/^"|"$/g,''));const a=num(c[iA]),o=num(c[iO]);if(!isFinite(a)||!isFinite(o))continue;
+    const props={};hd.forEach((h,k)=>{if(k!==iA&&k!==iO){const v=num(c[k]);if(isFinite(v))props[h]=v;}});rows.push({pt:[a,o],props});}
+  return rows;
+}
+function popRawGeoJSON(js){
+  const feats=js.type==='FeatureCollection'?js.features:js.type==='Feature'?[js]:null;if(!feats)throw new Error('GeoJSON no reconocido: se espera un FeatureCollection de puntos o polígonos en EPSG:4326.');
+  const rows=[];const ring=r=>r.map(q=>[q[1],q[0]]);
+  for(const f of feats){const g=f.geometry;if(!g)continue;const props={};for(const [k,v] of Object.entries(f.properties||{})){const x=typeof v==='number'?v:parseFloat(String(v).replace(',','.'));if(isFinite(x)&&v!==null&&v!=='')props[k]=x;}
+    if(g.type==='Point')rows.push({pt:[g.coordinates[1],g.coordinates[0]],props});
+    else if(g.type==='MultiPoint')for(const q of g.coordinates)rows.push({pt:[q[1],q[0]],props});
+    else if(g.type==='Polygon')rows.push({rings:g.coordinates.map(ring),props});
+    else if(g.type==='MultiPolygon')rows.push({rings:g.coordinates.flatMap(poly=>poly.map(ring)),props});}
+  if(!rows.length)throw new Error('El GeoJSON no tiene puntos ni polígonos.');
+  return rows;
+}
+function popFields(rows){const s=new Set();for(const r of rows)for(const k of Object.keys(r.props))s.add(k);return [...s];}
+function guessPopFields(fields){
+  const tot=fields.find(h=>/^(pob_total|poblacion_total|población_total|total_personas|personas|poblacion|población|pob|tp27_perso)$/i.test(h))||fields.find(h=>/(pob|perso|total)/i.test(h)&&!/(pmr|mov|discap|dif)/i.test(h))||fields[0]||'';
+  const pmr=fields.find(h=>/^(pob_pmr|pmr|mov|mov_b|movilidad|dif_mov)$/i.test(h))||fields.find(h=>/(pmr|mov|discap)/i.test(h))||'';
+  return {tot,pmr};
+}
+function popBuild(rows,fTot,fPmr,name){
+  const pts=[],polys=[];let tot=0,pmr=0,omitidos=0;
+  for(const r of rows){const t=r.props[fTot],m=fPmr?r.props[fPmr]:0;if(!(t>=0)&&!(m>=0)){omitidos++;continue;}
+    const T=t>=0?t:0,Mv=m>=0?m:0;tot+=T;pmr+=Mv;
+    if(r.pt)pts.push({lat:r.pt[0],lon:r.pt[1],tot:T,pmr:Mv});else polys.push({rings:r.rings,tot:T,pmr:Mv});}
+  if(!pts.length&&!polys.length)throw new Error('El campo «'+fTot+'» no tiene valores numéricos.');
+  return {name,pts,polys,hasPmr:!!fPmr,tot,pmr,fTot,fPmr,omitidos};
+}
+function cellIdx(g,lat,lon){const r=Math.floor((g.a1-lat)/g.dA),c=Math.floor((lon-g.o0)/g.dO);return (r<0||r>=g.rows||c<0||c>=g.cols)?-1:r*g.cols+c;}
+function cellsInRings(g,rings){ // celdas cuyo centro cae dentro de los anillos (regla par-impar: los huecos quedan fuera)
+  const out=[];
+  for(let r=0;r<g.rows;r++){const la=g.a1-(r+.5)*g.dA,xs=[];
+    for(const ring of rings)for(let i=0,j=ring.length-1;i<ring.length;j=i++){const [ya,xa]=ring[i],[yb,xb]=ring[j];
+      if((ya>la)!==(yb>la))xs.push(xa+(la-ya)/(yb-ya)*(xb-xa));}
+    xs.sort((p,q)=>p-q);
+    for(let k=0;k+1<xs.length;k+=2){const c0=Math.max(0,Math.ceil((xs[k]-g.o0)/g.dO-.5)),c1=Math.min(g.cols-1,Math.floor((xs[k+1]-g.o0)/g.dO-.5));for(let c=c0;c<=c1;c++)out.push(r*g.cols+c);}}
+  return out;
+}
+function allocPop(){
+  const g=S.grid,pop=S.pop;if(!g||!pop){S.popGrid=null;return;}
+  const tot=new Float64Array(g.NC),pmr=new Float64Array(g.NC),fuera={tot:0,pmr:0};
+  const put=(i,t,m)=>{if(i<0||!g.inside[i]){fuera.tot+=t;fuera.pmr+=m;return;}tot[i]+=t;pmr[i]+=m;};
+  for(const p of pop.pts)put(cellIdx(g,p.lat,p.lon),p.tot,p.pmr);
+  for(const q of pop.polys){
+    const dentro=cellsInRings(g,q.rings).filter(i=>g.inside[i]),conRed=dentro.filter(i=>g.cn[i*g.K]>=0),uso=conRed.length?conRed:dentro; // reparto uniforme entre las celdas con red
+    if(uso.length){const w=1/uso.length;for(const i of uso){tot[i]+=q.tot*w;pmr[i]+=q.pmr*w;}continue;}
+    let a=0,o=0,n=0;for(const ring of q.rings)for(const [y,x] of ring){a+=y;o+=x;n++;} // polígono menor que una celda: va a la celda de su centroide
+    put(n?cellIdx(g,a/n,o/n):-1,q.tot,q.pmr);}
+  S.popGrid={tot,pmr,fuera};
+}
+// Población dentro de cada umbral para un perfil: los perfiles de movilidad reducida usan la población con movilidad reducida si existe.
+function popStats(p,c){
+  const pg=S.popGrid,pop=S.pop;if(!pg||!pop)return null;const usaPmr=p.grupo==='pmr'&&pop.hasPmr,arr=usaPmr?pg.pmr:pg.tot;
+  const o={campo:usaPmr?'pmr':'total',t15:0,t30:0,t60:0,sinAcceso:0,sinRed:0,fuera:usaPmr?pg.fuera.pmr:pg.fuera.tot,sT:0,alc:0};
+  let asignada=0;
+  for(let i=0;i<arr.length;i++){const w=arr[i];if(!w)continue;asignada+=w;const t=c.cT[i];
+    if(t!==t){o.sinRed+=w;continue;}if(t===Infinity){o.sinAcceso+=w;continue;}
+    const m=t/60;if(m<=15)o.t15+=w;if(m<=30)o.t30+=w;if(m<=60)o.t60+=w;o.sT+=w*t;o.alc+=w;}
+  o.total=asignada+o.fuera;o.mT=o.alc?o.sT/o.alc:Infinity;return o;
+}
+
+/* =================== cartograma de tiempo (un destino) =================== */
+// Radio = minutos de viaje por la red hasta UN destino; ángulo = dirección desde ese destino a la celda. Se resuelve con una sola semilla
+// por perfil (no con el destino más cercano), para que los dos perfiles comparados muestren las mismas celdas.
+function cronoCells(p,destNode){const r=solve(p,[destNode]),c=cellValues(p,r);return {r,c,ps:popStats(p,c)};}
+function cronoPoint(g,i,dLat,dLon,tMin){
+  const row=Math.floor(i/g.cols),col=i%g.cols,lat=g.a1-(row+.5)*g.dA,lon=g.o0+(col+.5)*g.dO;
+  const dx=(lon-dLon)*Math.cos(dLat*Math.PI/180)*111320,dy=(lat-dLat)*111320;
+  return {ang:Math.atan2(dy,dx),r:tMin};
+}
+
+/* =================== mapa =================== */
+const map=L.map('map',{preferCanvas:true,zoomControl:true,attributionControl:true}).setView([6.152,-75.376],13);
+const canvasR=L.canvas({padding:.3});
+const isDark=()=>{const t=document.documentElement.dataset.theme;return t?t==='dark':matchMedia('(prefers-color-scheme: dark)').matches;};
+const BASES={
+  claro:()=>L.tileLayer(`https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_${isDark()?'Dark':'Light'}_Gray_Base/MapServer/tile/{z}/{y}/{x}`,{maxNativeZoom:16,maxZoom:19,attribution:'Esri, HERE, Garmin, OpenStreetMap contributors'}),
+  calles:()=>L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Esri, HERE, Garmin, OpenStreetMap contributors'}),
+  esri:()=>L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Imagen © Esri, Maxar, Earthstar Geographics'}),
+  osm:()=>L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}),
+  none:()=>null};
+let base=null,baseKey='claro';
+function setBase(k){baseKey=k;if(base)map.removeLayer(base);base=BASES[k]();if(!base)return;let failed=false;
+  base.on('tileerror',()=>{if(failed)return;failed=true;showBanner('Mapa base no disponible en esta vista; la red vial se dibuja sin teselas.');});
+  base.addTo(map);}
+setBase('claro');
+function showBanner(t){const b=$('#banner');b.textContent=t;b.hidden=false;setTimeout(()=>b.hidden=true,6000);}
+map.createPane('grid');map.getPane('grid').style.zIndex=350;
+map.createPane('net');map.getPane('net').style.zIndex=380;
+map.createPane('top');map.getPane('top').style.zIndex=640;
+
+function clearLayer(k){if(S.layers[k]){map.removeLayer(S.layers[k]);S.layers[k]=null;}}
+function drawNetwork(){
+  clearLayer('net');clearLayer('steps');clearLayer('bnd');clearLayer('names');const n=S.net;
+  const groups={maj:[],min:[],pth:[]},st=[];
+  for(let e=0;e<n.M;e++){const seg=[[n.lat[n.ea[e]],n.lon[n.ea[e]]],[n.lat[n.eb[e]],n.lon[n.eb[e]]]];const c=n.cls[e];
+    if(n.flags[e]&F.STEPS){st.push(seg);continue;}(MAJOR.has(c)?groups.maj:PATHS.has(c)?groups.pth:groups.min).push(seg);}
+  const g=L.layerGroup([
+    L.polyline(groups.pth,{renderer:canvasR,pane:'net',color:css('--net-path'),weight:1,opacity:.8,interactive:false}),
+    L.polyline(groups.min,{renderer:canvasR,pane:'net',color:css('--net-minor'),weight:1,opacity:.9,interactive:false}),
+    L.polyline(groups.maj,{renderer:canvasR,pane:'net',color:css('--net-major'),weight:2.2,opacity:.95,interactive:false})]);
+  S.layers.net=g.addTo(map);
+  S.layers.steps=L.polyline(st,{renderer:canvasR,pane:'net',color:css('--steps'),weight:3,dashArray:'2 3',interactive:false});
+  if($('#chkSteps').checked)S.layers.steps.addTo(map);
+  drawNames();
+  if(n.boundary.length)S.layers.bnd=L.polygon(n.boundary,{renderer:canvasR,pane:'net',color:css('--fg'),weight:1.5,dashArray:'6 4',fill:false,interactive:false}).addTo(map);
+}
+function drawNames(){
+  clearLayer('names');if(!S.net||!$('#chkNames').checked||!(S.net.bnames||[]).length)return;
+  S.layers.names=L.layerGroup(S.net.bnames.map(b=>L.marker([b.lat,b.lon],{interactive:false,keyboard:false,zIndexOffset:900,
+    icon:L.divIcon({className:'mname',html:`<span>${esc(b.name)}</span>`,iconSize:[0,0]})}))).addTo(map);
+}
+function drawDests(){
+  clearLayer('dest');const ms=[];
+  for(const d of S.dests){if(!d.on)continue;
+    const m=L.circleMarker([d.lat,d.lon],{pane:'top',radius:8,color:css('--dest-ring'),weight:2.5,fillColor:isEdu(d)?css('--dest-edu'):css('--dest'),fillOpacity:1});
+    m.bindTooltip(esc(d.name),{direction:'top',offset:[0,-6]});ms.push(m);}
+  S.layers.dest=L.layerGroup(ms).addTo(map);
+}
+
+/* bandas y colores */
+const RAMP=['#0b3d63','#1a6c8c','#2a9a93','#6fbf96','#c3dd8a','#f3d36b','#efa152','#d9663f','#a63c3a'];
+const RAMP_GAP=['#f4e3cf','#f1bc8f','#ea8a5e','#d55a45','#ad3240','#76183d'];
+const C_NOACC='#8a8f94',C_EXCL='#3c0d4a';
+function hex2rgb(h){h=h.replace('#','');return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];}
+function rampN(ramp,n){const out=[];for(let i=0;i<n;i++){const t=n===1?0:i/(n-1)*(ramp.length-1),j=Math.min(ramp.length-2,Math.floor(t)),f=t-j;
+  const a=hex2rgb(ramp[j]),b=hex2rgb(ramp[j+1]);out.push(a.map((x,k)=>Math.round(x+(b[k]-x)*f)));}return out;}
+const BANDS_DEF={t:'5,10,15,20,30,45,60',d:'250,500,1000,2000,3000,5000,8000',m:'0,5000,10000,15000,20000,30000,50000',g:'5000,10000,15000,20000,30000,50000,80000',gap:'2,5,10,15,20,30'};
+const UNIT={t:'min',d:'m',m:'COP',g:'COP',gap:'min'};
+const bandsFor=m=>{const v=($('#inBands').value||BANDS_DEF[m]).split(/[,; ]+/).map(Number).filter(x=>isFinite(x));return [...new Set(v)].sort((a,b)=>a-b);};
+function metricArrays(){
+  const m=$('#selMetric').value,pid=$('#selProf').value,r=S.res[pid];if(!r)return null;
+  if(m==='gap'){const q=S.res[$('#selCmp').value];if(!q)return null;
+    const NC=r.cT.length,a=new Float32Array(NC);for(let i=0;i<NC;i++){const x=r.cT[i],y=q.cT[i];
+      a[i]=(x!==x||y!==y)?NaN:(x===Infinity&&y===Infinity)?Infinity:(x===Infinity)?-Infinity:(x-y)/60;}
+    const nv=new Float32Array(r.T.length);for(let i=0;i<nv.length;i++){const x=r.T[i],y=q.T[i];nv[i]=(x===Infinity&&y===Infinity)?Infinity:x===Infinity?-Infinity:(x-y)/60;}
+    return {m,cell:a,node:nv};}
+  const k={t:'T',d:'D',m:'M',g:'G'}[m],ck={t:'cT',d:'cD',m:'cM',g:'cG'}[m];
+  if(m==='t'){const a=Float32Array.from(r.cT,x=>x/60),nv=Float32Array.from(r.T,x=>x/60);return {m,cell:a,node:nv};}
+  return {m,cell:r[ck],node:r[k]};
+}
+function bandOf(v,th){if(v===-Infinity)return -2;if(v===Infinity)return -1;let b=0;while(b<th.length&&v>th[b])b++;return b;}
+function drawGrid(){
+  clearLayer('grid');clearLayer('netc');const ma=metricArrays(),g=S.grid;
+  if(!ma||!g){$('#legend').hidden=true;return;}
+  const th=bandsFor(ma.m),cols=rampN(ma.m==='gap'?RAMP_GAP:RAMP,th.length+1);
+  const counts=new Array(th.length+1).fill(0);let nNo=0,nEx=0,tot=0;
+  const cv=document.createElement('canvas');cv.width=g.cols;cv.height=g.rows;const cx=cv.getContext('2d');const img=cx.createImageData(g.cols,g.rows);
+  const noc=hex2rgb(C_NOACC),exc=hex2rgb(C_EXCL);
+  for(let i=0;i<g.NC;i++){const v=ma.cell[i];if(v!==v)continue;tot++;const b=bandOf(v,th);let c;
+    if(b===-1){c=noc;nNo++;}else if(b===-2){c=exc;nEx++;}else{c=cols[b];counts[b]++;}
+    img.data[i*4]=c[0];img.data[i*4+1]=c[1];img.data[i*4+2]=c[2];img.data[i*4+3]=b===-1?150:255;}
+  cx.putImageData(img,0,0);
+  if($('#chkGrid').checked)S.layers.grid=L.imageOverlay(cv.toDataURL(),[[g.a1-g.rows*g.dA,g.o0],[g.a1,g.o0+g.cols*g.dO]],{pane:'grid',opacity:+$('#rngOp').value,className:'gridimg',interactive:false}).addTo(map);
+  if($('#chkNetColor').checked){const n=S.net,gr=cols.map(()=>[]);
+    for(let e=0;e<n.M;e++){const a=ma.node[n.ea[e]],b=ma.node[n.eb[e]];const v=Math.min(a,b);const bb=bandOf(isFinite(a)&&isFinite(b)?(a+b)/2:v,th);if(bb<0)continue;
+      gr[bb].push([[n.lat[n.ea[e]],n.lon[n.ea[e]]],[n.lat[n.eb[e]],n.lon[n.eb[e]]]]);}
+    S.layers.netc=L.layerGroup(gr.map((segs,b)=>L.polyline(segs,{renderer:canvasR,pane:'net',color:`rgb(${cols[b].join(',')})`,weight:2.6,opacity:1,interactive:false}))).addTo(map);}
+  // leyenda
+  const u=UNIT[ma.m],fmt=x=>ma.m==='d'?fmtKm(x):(u==='COP'?fmtCOP(x):x+' '+u);
+  const lab=b=>b===0?(ma.m==='gap'?'≤ '+fmt(th[0]):'≤ '+fmt(th[0])):b===th.length?'> '+fmt(th[th.length-1]):fmt(th[b-1]).replace(/ (min|COP)$/,'')+' – '+fmt(th[b]);
+  const pid=$('#selProf').value,pn=PROFILES.find(p=>p.id===pid);
+  const title=ma.m==='gap'?`Brecha: ${pn.nombre} − ${PROFILES.find(p=>p.id===$('#selCmp').value).nombre}`:`${$('#selMetric').selectedOptions[0].text} · ${pn.nombre}`;
+  let h=`<h3>${esc(title)}</h3>`;
+  for(let b=0;b<=th.length;b++)h+=`<div class="li"><span class="bx" style="background:rgb(${cols[b].join(',')})"></span><span>${lab(b)}</span><span>${fmtPct(counts[b]/tot)}</span></div>`;
+  if(ma.m==='gap'&&nEx)h+=`<div class="li"><span class="bx" style="background:${C_EXCL}"></span><span>Solo accesible para la comparación</span><span>${fmtPct(nEx/tot)}</span></div>`;
+  h+=`<div class="li"><span class="bx" style="background:${C_NOACC};opacity:.6"></span><span>Sin acceso</span><span>${fmtPct(nNo/tot)}</span></div>`;
+  $('#legend').innerHTML=h;$('#legend').hidden=false;
+}
+
+/* =================== consulta de origen =================== */
+function routeFrom(r,node){
+  const n=S.net,N=n.N,segs=[],bus=[];let s=node,guard=0,last=node;
+  while(s>=0&&r.nx[s]>=0&&guard++<5e5){const e=r.ne[s],nxt=r.nx[s];
+    if(e>=0){const seg=[[n.lat[n.ea[e]],n.lon[n.ea[e]]],[n.lat[n.eb[e]],n.lon[n.eb[e]]]];(s>=N?bus:segs).push(seg);}
+    s=nxt;last=s%N;}
+  return {segs,bus,end:last};
+}
+function doQuery(ll,fly){
+  if(!S.net)return;S.queryLL=ll;clearLayer('route');
+  $('#inpOLat').value=ll.lat.toFixed(5);$('#inpOLon').value=ll.lng.toFixed(5);
+  if(fly)map.setView(ll,Math.max(map.getZoom(),14));
+  const near=nearest(ll.lat,ll.lng,1500,6,false);const q=$('#query');
+  const act=PROFILES.filter(p=>p.on&&S.res[p.id]);
+  if(!near.length||!act.length){q.innerHTML=`<h3>Origen<button class="x" id="qClose" aria-label="Cerrar">✕</button></h3><p class="note">${!near.length?'No hay red vial a menos de 1,5 km de este punto.':'Calcula primero las isócronas.'}</p>`;q.hidden=false;$('#qClose').onclick=closeQuery;return;}
+  const crit=P().crit,ref=act.find(p=>p.grupo==='ref'&&p.modo==='pie')||act[0];const rows=[];let refT=null;
+  const pick=(p)=>{const r=S.res[p.id],vacc=Math.max(0.1,p.v0)/3.6;let best=Infinity,bn=-1,bd=0;
+    for(const [d,nd] of near){const ta=d/vacc,v=crit==='g'?r.G[nd]+ta*r.vot:r.T[nd]+ta;if(v<best){best=v;bn=nd;bd=d;}}
+    if(bn<0)return {T:Infinity};const ta=bd/vacc;return {T:r.T[bn]+ta,D:r.D[bn]+bd,M:r.M[bn],G:r.G[bn]+ta*r.vot,node:bn,acc:bd};};
+  for(const p of act){const v=pick(p);rows.push([p,v]);if(p===ref)refT=v.T;}
+  const destByNode=new Map();for(const d of S.dests.filter(d=>d.on)){destByNode.set(d.nodeFoot,d.name);destByNode.set(d.nodeCar,d.name);}
+  const pid=$('#selProf').value,cur=rows.find(([p])=>p.id===pid)||rows[0];
+  // ruta del perfil activo
+  if(cur&&isFinite(cur[1].T)){const rt=routeFrom(S.res[cur[0].id],cur[1].node);const n=S.net;
+    const lay=[L.polyline(rt.segs,{pane:'top',color:css('--fg'),weight:5,opacity:.85,interactive:false}),
+      L.polyline(rt.segs,{pane:'top',color:cur[0].color,weight:3,opacity:1,interactive:false}),
+      L.polyline(rt.bus,{pane:'top',color:cur[0].color,weight:6,opacity:.9,dashArray:'8 6',interactive:false}),
+      L.polyline([[ll.lat,ll.lng],[n.lat[cur[1].node],n.lon[cur[1].node]]],{pane:'top',color:css('--fg'),weight:1.5,dashArray:'3 4',interactive:false}),
+      L.circleMarker(ll,{pane:'top',radius:6,color:css('--dest-ring'),weight:2,fillColor:css('--fg'),fillOpacity:1})];
+    S.layers.route=L.layerGroup(lay).addTo(map);cur[1].dest=destByNode.get(rt.end)||'—';}
+  else S.layers.route=L.layerGroup([L.circleMarker(ll,{pane:'top',radius:6,color:css('--dest-ring'),weight:2,fillColor:css('--fg'),fillOpacity:1})]).addTo(map);
+  let h=`<h3>Origen consultado<button class="x" id="qClose" aria-label="Cerrar">✕</button></h3>
+  <p class="hint mono">${ll.lat.toFixed(5)}, ${ll.lng.toFixed(5)} · acceso a la red: ${Math.round(near[0][0])} m</p>
+  <div class="tablewrap"><table><tr><th>Perfil</th><th>Tiempo</th><th>× ref.</th><th>Distancia</th><th>Costo</th><th>C. generalizado</th></tr>`;
+  for(const [p,v] of rows){const ratio=isFinite(v.T)&&refT&&isFinite(refT)?(v.T/refT).toFixed(2)+'×':'—';
+    h+=`<tr class="${p.id===pid?'active':''}"><td><span class="sw" style="display:inline-block;background:${p.color};margin-right:6px"></span>${esc(p.nombre)}</td><td class="num">${fmtMin(v.T)}</td><td class="num">${ratio}</td><td class="num">${fmtKm(v.D)}</td><td class="num">${fmtCOP(v.M)}</td><td class="num">${fmtCOP(v.G)}</td></tr>`;}
+  h+=`</table></div><p class="hint">Ruta dibujada: ${esc(cur[0].nombre)}${cur[1].dest?' → '+esc(cur[1].dest):''}. Cambia el perfil en «Visualización» para ver otra. «× ref.» compara con ${esc(ref.nombre)}.</p>`;
+  q.innerHTML=h;q.hidden=false;$('#qClose').onclick=closeQuery;
+}
+function consultarOrigen(){
+  let a=$('#inpOLat').value.trim(),o=$('#inpOLon').value.trim();
+  const par=a.match(/^(-?\d+(?:[.,]\d+)?)\s*[;\s]\s*(-?\d+(?:[.,]\d+)?)$/)||a.match(/^(-?\d+(?:[.,]\d+)?)\s*,\s*(-?\d+(?:[.,]\d+)?)$/);
+  if(par&&!o){a=par[1];o=par[2];}
+  const num=t=>/^-?\d+(?:[.,]\d+)?$/.test(t)?parseFloat(t.replace(',','.')):NaN;
+  let la=num(a),lo=num(o);
+  if(!isFinite(la)||!isFinite(lo)){toast('Escribe latitud y longitud como números (ej. 6,155 y -75,370).');return;}
+  if(Math.abs(la)>90||Math.abs(lo)>180){toast('Coordenadas fuera de rango: latitud ±90, longitud ±180.');return;}
+  if(!S.net){toast('Carga primero una red.');return;}
+  const b=S.net.bk,inb=(x,y)=>x>=b.a0-.2&&x<=b.a0+b.dA*b.bh+.2&&y>=b.o0-.2&&y<=b.o0+b.dO*b.bw+.2;
+  if(!inb(la,lo)&&inb(lo,la)){[la,lo]=[lo,la];toast('Latitud y longitud estaban invertidas; las intercambié.');}
+  doQuery(L.latLng(la,lo),true);
+}
+function closeQuery(){$('#query').hidden=true;S.queryLL=null;clearLayer('route');}
+
+/* =================== interfaz =================== */
+function renderNetStatus(){
+  const n=S.net;let withZ=0;for(let i=0;i<n.N;i++)if(n.elev[i]===n.elev[i])withZ++;
+  let st=0,ns=0,up=0,bus=0,art=0,kmBus=0,kmArt=0,km0=0;for(let e=0;e<n.M;e++){const f=n.flags[e];if(f&F.STEPS)st++;if(f&F.NOSIDE)ns++;if(f&F.UNPAVED)up++;km0+=n.len[e];if(f&F.BUS){bus++;kmBus+=n.len[e];}if(f&F.ART){art++;kmArt+=n.len[e];}}
+  let km=0;for(let e=0;e<n.M;e++)km+=n.len[e];
+  $('#netStatus').textContent=`${n.name}\n${n.N.toLocaleString('es-CO')} nodos · ${n.M.toLocaleString('es-CO')} tramos · ${(km/1000).toFixed(0)} km de red\nElevación: ${fmtPct(withZ/n.N)} de nodos${withZ?'':' (sin pendientes)'}\nEscaleras ${st} · sin andén ${ns} · sin pavimento ${up}\nBus: ${bus} tramos de rutas de OSM (${fmtPct(kmBus/km0)} de la red)${n.busHeur?', sin rutas en esta red':''} · ${art} tramos en vías arteriales (${fmtPct(kmArt/km0)})`;
+  $('#netSmall').textContent=n.source==='demo'?'demostración':n.source==='osm'?'OpenStreetMap':'archivo';
+  const tag=$('#srcTag');tag.textContent=n.source==='demo'?'Red sintética de demostración: no corresponde a un territorio real':'Red: '+n.name;tag.classList.toggle('demo',n.source==='demo');
+}
+function renderDests(){
+  const box=$('#destList');const on=S.dests.filter(d=>d.on).length;$('#destCount').textContent=`${on} de ${S.dests.length} activos`;
+  if(!S.dests.length){box.innerHTML='<p class="note" style="padding:8px">No hay destinos. Agrégalos con clic en el mapa o con un CSV.</p>';return;}
+  box.innerHTML=S.dests.map((d,i)=>`<label><input type="checkbox" data-i="${i}" ${d.on?'checked':''}><span class="nm" title="${esc(d.name)}">${esc(d.name)}</span><span class="chip">${esc(d.origen==='osm'?d.tipo:d.origen)}</span>${d.origen!=='osm'?`<button class="x" data-del="${i}" aria-label="Quitar">✕</button>`:'<span></span>'}</label>`).join('');
+}
+function renderProfiles(){
+  const box=$('#profList');const openIds=new Set([...box.querySelectorAll('details[open]')].map(d=>d.dataset.id));
+  box.innerHTML=PROFILES.map((p,i)=>{
+    const flds=FIELDS.filter(f=>f[3](p)).map(f=>`<label class="f">${f[1]} (${f[2]})<input type="number" step="any" id="pf_${p.id}_${f[0]}" data-p="${i}" data-k="${f[0]}" value="${p[f[0]]}"></label>`).join('');
+    return `<details class="prof" data-id="${p.id}" ${openIds.has(p.id)?'open':''}><summary><input type="checkbox" data-on="${i}" ${p.on?'checked':''} aria-label="Activar perfil"><span class="sw" style="background:${p.color}"></span><span>${esc(p.nombre)}</span><span class="tag ${p.grupo}">${p.grupo==='pmr'?'PMR':'ref.'}</span></summary>
+    <div class="body"><label class="f full">Nombre<input type="text" id="pf_${p.id}_nombre" data-p="${i}" data-k="nombre" value="${esc(p.nombre)}"></label>
+    <label class="f">Modo<select id="pf_${p.id}_modo" data-p="${i}" data-k="modo">${Object.entries(MODOS).map(([k,v])=>`<option value="${k}" ${p.modo===k?'selected':''}>${v}</option>`).join('')}</select></label>
+    <label class="f">Grupo<select id="pf_${p.id}_grupo" data-p="${i}" data-k="grupo"><option value="ref" ${p.grupo==='ref'?'selected':''}>Sin limitación</option><option value="pmr" ${p.grupo==='pmr'?'selected':''}>Movilidad reducida</option></select></label>
+    ${p.modo!=='vehiculo'?`<label class="f full">Tramos sobre la pendiente máxima<select id="pf_${p.id}_pendModo" data-p="${i}" data-k="pendModo"><option value="penalizar" ${p.pendModo!=='bloquear'?'selected':''}>Penalizar el tiempo (recomendado con DEM de 30 m)</option><option value="bloquear" ${p.pendModo==='bloquear'?'selected':''}>Bloquear (fragmenta la red si el DEM tiene ruido)</option></select></label>`:''}
+    ${p.modo==='bus'?`<label class="f full">Marcha hasta el paradero<select id="pf_${p.id}_marcha" data-p="${i}" data-k="marcha"><option value="pie" ${p.marcha==='pie'?'selected':''}>A pie</option><option value="silla" ${p.marcha==='silla'?'selected':''}>Silla de ruedas</option></select></label>`:''}
+    ${flds}${PROFILES.length>1?`<div class="full row"><button class="x" data-delp="${i}">Eliminar perfil</button></div>`:''}</div></details>`;}).join('');
+  const sp=$('#selProf'),sc=$('#selCmp'),pv=sp.value,cv=sc.value;
+  const opts=PROFILES.filter(p=>p.on).map(p=>`<option value="${p.id}">${esc(p.nombre)}</option>`).join('');sp.innerHTML=opts;sc.innerHTML=opts;
+  const ids=PROFILES.filter(p=>p.on).map(p=>p.id);
+  sp.value=ids.includes(pv)?pv:(ids.includes('p_silla')?'p_silla':ids[0]);
+  sc.value=ids.includes(cv)?cv:(ids.includes('p_ref')?'p_ref':ids[0]);
+}
+const fmtN=x=>isFinite(x)?Math.round(x).toLocaleString('es-CO'):'—';
+function renderTable(){
+  const act=PROFILES.filter(p=>p.on&&S.res[p.id]);const t=$('#tblRes');
+  $('#lblTbl').hidden=!S.pop;if(!S.pop&&S.tblBase==='pob'){S.tblBase='area';$('#selTbl').value='area';}
+  $('#tblSmall').textContent=S.tblBase==='pob'?'personas':'% del área con red';
+  if(!act.length){t.innerHTML='<tr><td>Sin resultados.</td></tr>';return;}
+  const pid=$('#selProf').value;
+  if(S.tblBase==='pob'&&S.pop){
+    t.innerHTML=`<tr><th>Perfil</th><th>Población</th><th>≤15 min</th><th>≤30 min</th><th>≤60 min</th><th>Sin acceso</th><th>Sin red cercana</th><th>Fuera del límite</th><th>T. medio</th></tr>`+
+    act.map(p=>{const s=S.res[p.id].ps;if(!s)return '';const pc=x=>fmtPct(s.total?x/s.total:NaN);
+      return `<tr class="${p.id===pid?'active':''}" data-pid="${p.id}" style="cursor:pointer"><td><span class="sw" style="display:inline-block;background:${p.color};margin-right:6px"></span>${esc(p.nombre)}</td>
+      <td class="num">${fmtN(s.total)}<br><small>${s.campo==='pmr'?'mov. reducida':'total'}</small></td>
+      <td class="num">${fmtN(s.t15)}<br><small>${pc(s.t15)}</small></td><td class="num">${fmtN(s.t30)}<br><small>${pc(s.t30)}</small></td><td class="num">${fmtN(s.t60)}<br><small>${pc(s.t60)}</small></td>
+      <td class="num">${fmtN(s.sinAcceso)}<br><small>${pc(s.sinAcceso)}</small></td><td class="num">${fmtN(s.sinRed)}<br><small>${pc(s.sinRed)}</small></td><td class="num">${fmtN(s.fuera)}<br><small>${pc(s.fuera)}</small></td>
+      <td class="num">${fmtMin(s.mT)}</td></tr>`;}).join('');
+    return;}
+  t.innerHTML=`<tr><th>Perfil</th><th>≤15 min</th><th>≤30 min</th><th>≤60 min</th><th>Sin acceso</th><th>T. medio</th><th>Dist. media</th><th>Costo medio</th><th>C. gen. medio</th></tr>`+
+  act.map(p=>{const s=S.res[p.id].st;return `<tr class="${p.id===pid?'active':''}" data-pid="${p.id}" style="cursor:pointer"><td><span class="sw" style="display:inline-block;background:${p.color};margin-right:6px"></span>${esc(p.nombre)}</td>
+  <td class="num">${fmtPct(s.t15/s.tot)}</td><td class="num">${fmtPct(s.t30/s.tot)}</td><td class="num">${fmtPct(s.t60/s.tot)}</td><td class="num">${fmtPct((s.tot-s.reach)/s.tot)}</td>
+  <td class="num">${fmtMin(s.mT)}</td><td class="num">${fmtKm(s.mD)}</td><td class="num">${fmtCOP(s.mM)}</td><td class="num">${fmtCOP(s.mG)}</td></tr>`;}).join('');
+}
+function renderCronoSelects(){
+  const dest=S.dests.filter(d=>d.on),pr=PROFILES.filter(p=>p.on);
+  const vd=$('#selCronoDest').value,va=$('#selCronoA').value,vb=$('#selCronoB').value;
+  $('#selCronoDest').innerHTML=dest.map(d=>`<option value="${esc(d.id)}">${esc(d.name)}</option>`).join('');
+  const opts=pr.map(p=>`<option value="${p.id}">${esc(p.nombre)}</option>`).join('');$('#selCronoA').innerHTML=opts;$('#selCronoB').innerHTML=opts;
+  const ids=pr.map(p=>p.id);
+  $('#selCronoDest').value=dest.some(d=>d.id===vd)?vd:(dest[0]?dest[0].id:'');
+  $('#selCronoA').value=ids.includes(va)?va:(ids.includes('p_ref')?'p_ref':ids[0]);
+  $('#selCronoB').value=ids.includes(vb)?vb:(ids.includes('p_silla')?'p_silla':ids[ids.length-1]);
+}
+function cronoReset(){S.crono=null;const cv=$('#cronoCv');if(cv)cv.style.display='none';const b=$('#btnCronoPng');if(b)b.disabled=true;const st=$('#cronoStatus');if(st)st.textContent='—';}
+function cronoDibujar(){
+  const g=S.grid;if(!S.net||!g)return toast('Calcula primero las isócronas.');
+  const d=S.dests.find(x=>x.id===$('#selCronoDest').value),pa=PROFILES.find(p=>p.id===$('#selCronoA').value),pb=PROFILES.find(p=>p.id===$('#selCronoB').value);
+  if(!d||!pa||!pb)return toast('Elige un destino y dos perfiles.');
+  const na=destNodeOf(d,pa),nb=destNodeOf(d,pb);if(na<0||nb<0)return toast('No hay red cerca de ese destino para uno de los perfiles.');
+  const T=Math.max(10,+$('#inCronoT').value||60),A=cronoCells(pa,na),B=cronoCells(pb,nb);
+  const th=BANDS_DEF.t.split(',').map(Number).filter(x=>x<=T),cols=rampN(RAMP,th.length+1),colStr=cols.map(c=>`rgb(${c.join(',')})`);
+  const W=1100,H=640,R=235,cy=335,cxs=[285,815],cv=$('#cronoCv'),cx=cv.getContext('2d');cv.width=W;cv.height=H;
+  cx.fillStyle='#fff';cx.fillRect(0,0,W,H);cx.textAlign='center';
+  const ref=A.c.cT,per=[{p:pa,c:A.c,ps:A.ps},{p:pb,c:B.c,ps:B.ps}],fuera=[0,0],sinAc=[0,0];
+  per.forEach((it,k)=>{const X=cxs[k];
+    cx.strokeStyle='#bbb';cx.lineWidth=1;cx.fillStyle='#666';cx.font='12px sans-serif';
+    let lastLab=-99;for(const t of [...th,T]){const rr=t/T*R;cx.beginPath();cx.arc(X,cy,rr,0,6.2832);cx.stroke();if(rr-lastLab>=20||t===T){cx.fillText(t+' min',X,cy-rr-3);lastLab=rr;}}
+    for(let i=0;i<g.NC;i++){const t=it.c.cT[i]/60;if(t!==t)continue;if(t===Infinity){sinAc[k]++;continue;}if(t>T){fuera[k]++;continue;}
+      const pt=cronoPoint(g,i,d.lat,d.lon,t),rt=ref[i]/60,b=(rt===Infinity||rt!==rt)?-1:bandOf(rt,th);
+      cx.fillStyle=b<0?'#9aa0a6':colStr[b];const rr=pt.r/T*R;cx.fillRect(X+rr*Math.cos(pt.ang)-1,cy-rr*Math.sin(pt.ang)-1,2.2,2.2);}
+    cx.fillStyle='#d11a2a';cx.beginPath();cx.arc(X,cy,5,0,6.2832);cx.fill();cx.strokeStyle='#fff';cx.lineWidth=1.5;cx.stroke();
+    cx.fillStyle='#111';cx.font='600 15px sans-serif';cx.fillText(it.p.nombre,X,30);
+    cx.font='12px sans-serif';cx.fillStyle='#444';
+    const pop=it.ps?` · a ≤30 min: ${fmtN(it.ps.t30)} de ${fmtN(it.ps.total)} personas (${it.ps.campo==='pmr'?'mov. reducida':'total'})`:'';
+    cx.fillText(`Más de ${T} min: ${fuera[k].toLocaleString('es-CO')} celdas · sin acceso: ${sinAc[k].toLocaleString('es-CO')}${pop}`,X,H-52);});
+  cx.fillStyle='#111';cx.font='13px sans-serif';cx.fillText(`Destino: ${d.name} · radio = minutos por la red · ángulo = dirección desde el destino · color = banda de tiempo de «${pa.nombre}»`,W/2,H-28);
+  cx.font='11px sans-serif';cx.fillStyle='#666';cx.fillText('Cartograma propio; la idea de deformar el espacio por el tiempo viene de John Nelson y de Kamil Raczycki (2026).',W/2,H-10);
+  S.crono={png:cv.toDataURL('image/png'),destino:d.name,a:pa.nombre,b:pb.nombre,T,fuera,sinAc};
+  cv.style.display='block';$('#btnCronoPng').disabled=false;
+  $('#cronoStatus').textContent=`${d.name}\n${pa.nombre}: ${fuera[0].toLocaleString('es-CO')} celdas a más de ${T} min · ${pb.nombre}: ${fuera[1].toLocaleString('es-CO')}`;
+}
+async function cronoPng(){if(!S.crono)return;const b=await (await fetch(S.crono.png)).blob();saveFile(`cartograma_tiempo_${slug()}.png`,b,'image/png');}
+function renderAll(){renderTable();drawGrid();drawDests();renderPopStatus();renderCronoSelects();}
+function updateVOT(){const p=P();$('#votTxt').textContent=`Valor del tiempo: ${fmtCOP(p.smmlv/p.horas)} por hora y persona.`;}
+function syncBandsInput(){$('#inBands').value=BANDS_DEF[$('#selMetric').value];$('#lblCmp').style.visibility=$('#selMetric').value==='gap'?'visible':'hidden';}
+
+/* =================== carga de población =================== */
+function applyPop(){
+  if(!S.popRaw){S.pop=null;S.popGrid=null;renderPopStatus();renderTable();return;}
+  try{S.pop=popBuild(S.popRaw.rows,$('#selPopTot').value,$('#selPopPmr').value,S.popRaw.name);S.popGrid=null;renderPopStatus();scheduleCalc(50);}
+  catch(e){S.pop=null;S.popGrid=null;$('#popStatus').textContent='Error: '+e.message;}
+}
+function setPopRaw(rows,name,sel){
+  S.popRaw={rows,name};const fl=popFields(rows);if(!fl.length)throw new Error('El archivo no trae ningún campo numérico de población.');
+  const g=guessPopFields(fl),opt=(v,none)=>(none?'<option value="">— ninguno —</option>':'')+fl.map(f=>`<option value="${esc(f)}">${esc(f)}</option>`).join('');
+  $('#selPopTot').innerHTML=opt();$('#selPopPmr').innerHTML=opt(0,true);
+  $('#selPopTot').value=sel&&fl.includes(sel.tot)?sel.tot:g.tot;$('#selPopPmr').value=sel&&fl.includes(sel.pmr)?sel.pmr:g.pmr;
+  $('#popFields').hidden=false;$('#btnPopClear').hidden=false;applyPop();
+}
+async function loadPopFile(file){
+  try{$('#popStatus').textContent='Leyendo '+file.name+'…';await tick();const txt=await file.text(),nm=file.name;
+    const rows=txt.trim()[0]==='{'?popRawGeoJSON(JSON.parse(txt)):popRawCSV(txt);setPopRaw(rows,nm);toast('Población cargada: '+rows.length.toLocaleString('es-CO')+' registros');}
+  catch(e){$('#popStatus').textContent='Error: '+e.message;}
+}
+function renderPopStatus(){
+  const p=S.pop;$('#popSmall').textContent=p?'cargada':'';
+  if(!p){$('#popStatus').textContent='Sin población cargada: los resultados se expresan como porcentaje del área con red.';return;}
+  const g=S.popGrid;
+  $('#popStatus').textContent=`${p.name}\n${p.pts.length.toLocaleString('es-CO')} puntos · ${p.polys.length.toLocaleString('es-CO')} polígonos\nTotal «${p.fTot}»: ${fmtN(p.tot)} personas${p.hasPmr?`\nMovilidad reducida «${p.fPmr}»: ${fmtN(p.pmr)} personas`:'\nSin campo de movilidad reducida: todos los perfiles usan el total.'}${p.omitidos?`\n${p.omitidos} registros sin valor numérico, omitidos.`:''}${g?`\nFuera del límite municipal: ${fmtN(g.fuera.tot)} personas (se informan aparte)`:''}`;
+}
+
+/* =================== carga de red =================== */
+function setNet(raw,opts={}){
+  S.net=makeNet(raw);S.grid=null;S.res={};closeQuery();cronoReset();
+  const keep=opts.keepDests?S.dests.filter(d=>d.origen!=='osm'):[];
+  S.dests=[...S.net.osmDests.map(d=>({...d})),...keep];
+  if(opts.dests)S.dests=opts.dests.map(d=>({...d}));
+  for(const d of S.dests){d.nodeCar=null;d.nodeFoot=null;}
+  drawNetwork();renderNetStatus();renderDests();
+  const [a0,o0,a1,o1]=S.net.bbox;map.fitBounds([[a0,o0],[a1,o1]],{padding:[20,20]});
+  scheduleCalc(50);
+}
+function overpassQuery(){
+  const muns=$('#inMun').value.split(/[,;]/).map(s=>s.trim().replace(/["\\()|^$.*+?[\]{}]/g,'')).filter(Boolean),dep=$('#inDep').value.trim().replace(/"/g,'');
+  return `[out:json][timeout:240];
+area["boundary"="administrative"]["admin_level"="4"]["name"="${dep}"]->.dep;
+rel(area.dep)["boundary"="administrative"]["admin_level"~"^(6|8)$"]["name"~"^(${muns.join('|')})$"]->.mun;
+.mun map_to_area->.a;
+way["highway"](area.a)->.w;
+.w out body;
+.w >;
+out skel qt;
+.mun out geom;
+rel["route"~"^(bus|minibus|share_taxi)$"](area.a)->.br;
+way(r.br)(area.a);
+out ids;
+nwr["amenity"~"^(hospital|clinic|doctors|dentist|social_facility|nursing_home|school|kindergarten|college|university)$"](area.a);
+out center tags;
+nwr["healthcare"](area.a);
+out center tags;`;
+}
+const OVERPASS=['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter','https://overpass.private.coffee/api/interpreter'];
+async function downloadOSM(){
+  const q=overpassQuery();$('#qText').textContent=q;const btn=$('#btnOSM');btn.disabled=true;
+  $('#netStatus').textContent='Descargando red de OpenStreetMap… (puede tardar 1–3 minutos)';
+  let lastErr=null;
+  try{for(const u of OVERPASS){try{const r=await fetch(u,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'data='+encodeURIComponent(q)});
+        if(!r.ok){lastErr=new Error('Overpass respondió '+r.status);continue;}
+        const js=await r.json();const raw=parseOverpass(js,`${$('#inMun').value}, ${$('#inDep').value}`);setNet(raw,{keepDests:true});$('#osmHelp').hidden=true;toast('Red descargada de OpenStreetMap');return;}
+      catch(e){lastErr=e;if(e.message&&e.message.startsWith('El archivo'))break;}}
+    $('#osmHelp').hidden=false;
+    $('#netStatus').textContent=lastErr&&lastErr.message.startsWith('El archivo')?lastErr.message:'No fue posible conectarse a Overpass desde esta vista.';
+    if(S.net)setTimeout(renderNetStatus,4000);
+  }finally{btn.disabled=false;}
+}
+async function loadNetFile(file){
+  try{$('#netStatus').textContent='Leyendo '+file.name+'…';await tick();const js=JSON.parse(await file.text());
+    if(js.v===1&&js.lat){setNet(deserializeNet(js),{});toast('Red procesada cargada');}
+    else if(js.elements){setNet(parseOverpass(js,file.name.replace(/\.(geo)?json$/i,'')),{keepDests:true});toast('Red de Overpass cargada');}
+    else throw new Error('Formato no reconocido: se espera el JSON de Overpass o una red guardada por este simulador.');}
+  catch(e){$('#netStatus').textContent='Error: '+e.message;}
+}
+
+/* =================== elevación =================== */
+async function demTerrarium(){
+  const n=S.net;if(!n)return;const [a0,o0,a1,o1]=n.bbox;
+  const tx=(o,z)=>(o+180)/360*2**z*256,ty=(a,z)=>{const r=a*Math.PI/180;return (1-Math.log(Math.tan(r)+1/Math.cos(r))/Math.PI)/2*2**z*256;};
+  let z=14;const cnt=z=>(Math.floor(tx(o1,z)/256)-Math.floor(tx(o0,z)/256)+1)*(Math.floor(ty(a0,z)/256)-Math.floor(ty(a1,z)/256)+1);
+  while(z>10&&cnt(z)>220)z--;
+  const groups=new Map();for(let i=0;i<n.N;i++){const px=tx(n.lon[i],z),py=ty(n.lat[i],z),k=Math.floor(px/256)+'/'+Math.floor(py/256);if(!groups.has(k))groups.set(k,[]);groups.get(k).push(i);}
+  const keys=[...groups.keys()];let done=0,fail=0;$('#netStatus').textContent=`Descargando ${keys.length} teselas de elevación (z${z})…`;
+  const one=k=>new Promise(res=>{const [x,y]=k.split('/').map(Number);const im=new Image();im.crossOrigin='anonymous';
+    im.onload=()=>{try{const c=document.createElement('canvas');c.width=c.height=256;const cx=c.getContext('2d');cx.drawImage(im,0,0);const d=cx.getImageData(0,0,256,256).data;
+      const E=(px,py)=>{px=Math.max(0,Math.min(255,px));py=Math.max(0,Math.min(255,py));const j=(py*256+px)*4;return d[j]*256+d[j+1]+d[j+2]/256-32768;};
+      for(const i of groups.get(k)){const fx=tx(n.lon[i],z)-x*256-.5,fy=ty(n.lat[i],z)-y*256-.5,x0=Math.floor(fx),y0=Math.floor(fy),u=fx-x0,v=fy-y0;
+        n.elev[i]=E(x0,y0)*(1-u)*(1-v)+E(x0+1,y0)*u*(1-v)+E(x0,y0+1)*(1-u)*v+E(x0+1,y0+1)*u*v;}}catch(e){fail++;}
+      done++;res();};
+    im.onerror=()=>{fail++;done++;res();};im.src=`https://s3.amazonaws.com/elevation-tiles-prod/terrarium/${z}/${x}/${y}.png`;});
+  for(let i=0;i<keys.length;i+=8){await Promise.all(keys.slice(i,i+8).map(one));$('#netStatus').textContent=`Elevación: ${done}/${keys.length} teselas…`;}
+  if(fail===keys.length){renderNetStatus();$('#netStatus').textContent+='\n\nNo se pudo descargar el DEM en esta vista. Carga un GeoTIFF recortado desde QGIS.';return;}
+  n.elevS=null;renderNetStatus();toast(`Elevación asignada (${keys.length-fail} teselas Terrain Tiles, z${z})`);scheduleCalc(50);
+}
+function tm(lat,lon,p){const a=6378137,f=1/298.257222101,e2=f*(2-f),ep2=e2/(1-e2),r=Math.PI/180,ph=lat*r,la=lon*r,ph0=p.lat0*r,la0=p.lon0*r;
+  const Mf=x=>a*((1-e2/4-3*e2*e2/64-5*e2**3/256)*x-(3*e2/8+3*e2*e2/32+45*e2**3/1024)*Math.sin(2*x)+(15*e2*e2/256+45*e2**3/1024)*Math.sin(4*x)-(35*e2**3/3072)*Math.sin(6*x));
+  const N=a/Math.sqrt(1-e2*Math.sin(ph)**2),T=Math.tan(ph)**2,C=ep2*Math.cos(ph)**2,A=(la-la0)*Math.cos(ph);
+  return [p.fe+p.k*N*(A+(1-T+C)*A**3/6+(5-18*T+T*T+72*C-58*ep2)*A**5/120),
+    p.fn+p.k*(Mf(ph)-Mf(ph0)+N*Math.tan(ph)*(A*A/2+(5-T+9*C+4*C*C)*A**4/24+(61-58*T+T*T+600*C-330*ep2)*A**6/720))];}
+const PROJ={4326:null,4686:null,4618:null,32618:{lat0:0,lon0:-75,k:0.9996,fe:500000,fn:0},32617:{lat0:0,lon0:-81,k:0.9996,fe:500000,fn:0},
+  9377:{lat0:4,lon0:-73,k:0.9992,fe:5000000,fn:2000000},3116:{lat0:4.596200416666666,lon0:-74.07750791666666,k:1,fe:1000000,fn:1000000},
+  3115:{lat0:4.596200416666666,lon0:-77.07750791666666,k:1,fe:1000000,fn:1000000}};
+function loadScript(src){return new Promise((res,rej)=>{if(window.GeoTIFF)return res();const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=()=>rej(new Error('No se pudo cargar la librería GeoTIFF.'));document.head.appendChild(s);});}
+async function demGeoTiff(file){
+  const n=S.net;if(!n)return;
+  try{$('#netStatus').textContent='Leyendo DEM…';await loadScript('https://cdn.jsdelivr.net/npm/geotiff@2.1.3/dist-browser/geotiff.js');
+    const tiff=await GeoTIFF.fromArrayBuffer(await file.arrayBuffer()),img=await tiff.getImage();
+    const [x0,y0,x1,y1]=img.getBoundingBox(),w=img.getWidth(),h=img.getHeight(),gk=img.getGeoKeys()||{};
+    const epsg=gk.ProjectedCSTypeGeoKey||gk.GeographicTypeGeoKey||4326;
+    if(!(epsg in PROJ))throw new Error(`EPSG:${epsg} no soportado. Reproyecta el DEM a EPSG:4326 o 9377 en QGIS.`);
+    const pr=PROJ[epsg],xy=(a,o)=>pr?tm(a,o,pr):[o,a];const ras=(await img.readRasters({samples:[0]}))[0];const nd=img.getGDALNoData();
+    const R=(c,r)=>{c=Math.max(0,Math.min(w-1,c));r=Math.max(0,Math.min(h-1,r));const v=ras[r*w+c];return (nd!=null&&v===nd)||v<-1000?NaN:v;};
+    let ok=0;for(let i=0;i<n.N;i++){const [X,Y]=xy(n.lat[i],n.lon[i]);const fc=(X-x0)/(x1-x0)*w-.5,fr=(y1-Y)/(y1-y0)*h-.5;
+      if(fc<-1||fr<-1||fc>w||fr>h)continue;const c0=Math.floor(fc),r0=Math.floor(fr),u=fc-c0,v=fr-r0;
+      const z=R(c0,r0)*(1-u)*(1-v)+R(c0+1,r0)*u*(1-v)+R(c0,r0+1)*(1-u)*v+R(c0+1,r0+1)*u*v;if(z===z){n.elev[i]=z;ok++;}}
+    n.elevS=null;renderNetStatus();toast(`DEM EPSG:${epsg} asignado a ${ok.toLocaleString('es-CO')} nodos`);scheduleCalc(50);
+  }catch(e){$('#netStatus').textContent='Error con el DEM: '+e.message;}
+}
+
+/* =================== destinos =================== */
+function parseCSV(txt){
+  const lines=txt.replace(/^﻿/,'').split(/\r?\n/).filter(l=>l.trim());if(lines.length<2)throw new Error('El CSV está vacío.');
+  const sep=(lines[0].match(/;/g)||[]).length>(lines[0].match(/,/g)||[]).length?';':',';
+  const hd=lines[0].split(sep).map(s=>s.trim().toLowerCase().replace(/"/g,''));
+  const fi=re=>hd.findIndex(h=>re.test(h));const iN=fi(/^(nombre|name|centro|sede)/),iA=fi(/^(lat|latitud|y)$/),iO=fi(/^(lon|lng|long|longitud|x)$/);
+  if(iA<0||iO<0)throw new Error('No encuentro columnas lat y lon en el encabezado.');
+  const out=[];for(const l of lines.slice(1)){const c=l.split(sep).map(s=>s.trim().replace(/^"|"$/g,''));
+    const a=parseFloat(c[iA].replace(',','.')),o=parseFloat(c[iO].replace(',','.'));if(!isFinite(a)||!isFinite(o))continue;
+    out.push({id:'c'+Math.random().toString(36).slice(2,8),name:iN>=0?c[iN]:'Destino',tipo:'csv',lat:a,lon:o,on:true,origen:'csv'});}
+  return out;
+}
+
+/* =================== exportes =================== */
+async function saveFile(name,text,mime){
+  const dl=await cap('downloads');
+  if(dl){try{await dl.save({filename:name,data:text instanceof Blob?text:new Blob([text],{type:mime})});toast('Archivo entregado: '+name);return;}
+    catch(e){if(e&&e.code==='declined')return;toast('No se pudo guardar: '+(e&&e.message||e));return;}}
+  if(inArtifact()){toast('Las descargas no están habilitadas en esta vista.');return;}
+  const a=document.createElement('a');a.href=URL.createObjectURL(text instanceof Blob?text:new Blob([text],{type:mime}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);
+}
+const slug=()=>(S.net?S.net.name:'red').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'').slice(0,40);
+function expCSV(){
+  const g=S.grid,act=PROFILES.filter(p=>p.on&&S.res[p.id]);if(!g||!act.length)return toast('No hay resultados que exportar.');
+  const r2=x=>isFinite(x)?(+x).toFixed(1):'';
+  const hd=['lat','lon',...act.flatMap(p=>[`t_min_${p.id}`,`d_m_${p.id}`,`costo_${p.id}`,`cgen_${p.id}`])];const L=[hd.join(',')];
+  for(let i=0;i<g.NC;i++){const r=act.map(p=>S.res[p.id]);if(r[0].cT[i]!==r[0].cT[i])continue;const row=Math.floor(i/g.cols),c=i%g.cols;
+    L.push([(g.a1-(row+.5)*g.dA).toFixed(6),(g.o0+(c+.5)*g.dO).toFixed(6),...r.flatMap(x=>[r2(x.cT[i]/60),r2(x.cD[i]),r2(x.cM[i]),r2(x.cG[i])])].join(','));}
+  saveFile(`isocronas_${slug()}_grilla.csv`,L.join('\n'),'text/csv');
+}
+function expASC(){
+  const ma=metricArrays(),g=S.grid;if(!ma||!g)return toast('No hay capa visible.');
+  let s=`ncols ${g.cols}\nnrows ${g.rows}\nxllcorner ${g.o0.toFixed(8)}\nyllcorner ${(g.a1-g.rows*g.dA).toFixed(8)}\ndx ${g.dO.toFixed(10)}\ndy ${g.dA.toFixed(10)}\nNODATA_value -9999\n`;
+  const rows=[];for(let r=0;r<g.rows;r++){const a=new Array(g.cols);for(let c=0;c<g.cols;c++){const v=ma.cell[r*g.cols+c];a[c]=isFinite(v)?(+v).toFixed(2):'-9999';}rows.push(a.join(' '));}
+  saveFile(`isocronas_${slug()}_${$('#selProf').value}_${ma.m}.asc${inArtifact()?'.txt':''}`,s+rows.join('\n'),'text/plain');
+}
+function expDest(){
+  const fc={type:'FeatureCollection',features:S.dests.filter(d=>d.on).map(d=>({type:'Feature',properties:{nombre:d.name,tipo:d.tipo,origen:d.origen},geometry:{type:'Point',coordinates:[d.lon,d.lat]}}))};
+  saveFile(`destinos_${slug()}.${inArtifact()?'json':'geojson'}`,JSON.stringify(fc,null,1),'application/geo+json');
+}
+function expParams(){const pb=S.pop?{archivo:S.pop.name,campo_total:S.pop.fTot,campo_movilidad_reducida:S.pop.fPmr||null,personas_total:S.pop.tot,personas_movilidad_reducida:S.pop.hasPmr?S.pop.pmr:null}:null;
+  saveFile(`parametros_${slug()}.json`,JSON.stringify({parametros:P(),perfiles:PROFILES,cortes:$('#inBands').value,poblacion:pb,fecha:new Date().toISOString()},null,2),'application/json');}
+
+/* =================== informe =================== */
+// Origen de los valores por defecto. «Dato» = valor publicado por una fuente; «Supuesto» = decisión de modelación editable.
+const FUENTES=[
+  ['SMMLV 2026','$1.750.905','Dato','Decreto de diciembre de 2025. Hay demandas en estudio en el Consejo de Estado; según Portafolio (9-oct-2026) el valor sigue vigente.'],
+  ['Horas laborales al mes','180','Supuesto','42 h semanales (reducción de jornada de la Ley 2101 de 2021) × 30/7.'],
+  ['Valor del tiempo','SMMLV ÷ horas','Supuesto','Valor de referencia por persona; no es un precio de mercado.'],
+  ['Taxi: banderazo, mínima y distancia','$5.900 · $8.300 · $200 por 82 m','Dato (otra ciudad)','Tarifa básica de Medellín desde el 2-feb-2026 (El Colombiano). No se encontró la tarifa de taxi de Rionegro para 2026 (búsqueda del 30-oct-2026); conviene pedirla a la Secretaría de Movilidad de Rionegro.'],
+  ['Taxi accesible: recargo y espera','+$10.000 · 20 min','Supuesto','Sin fuente; ajustable.'],
+  ['Pasaje de bus','$3.400','Dato (2025)','Rutas veredales de Rionegro, tarifas de 2025 (Radio Nacional, 2-ene-2025). No se verificó el valor de 2026: la búsqueda del 30-oct-2026 no halló la tarifa veredal vigente; se reportan 3.400 a 3.800 para rutas entre municipios conurbados del área metropolitana, que no son las de Rionegro.'],
+  ['Velocidad comercial del bus','18 km/h','Supuesto','Sin fuente; ajustable.'],
+  ['Velocidades peatonales','4,8 · 3,2 · 2,2 km/h','Supuesto','Valores de referencia usuales (1,34 · 0,9 · 0,6 m/s); conviene calibrarlos con trabajo de campo.'],
+  ['Pendiente máxima en silla manual','12 %','Supuesto','Operativo. Sentencias colombianas citan la NTC 4143 con pendientes máximas de 12 %, 10 % y 8 % según el desnivel de la rampa, pero no se dispone del texto de la norma; además aplica a rampas, no a vías, y el DEM no mide pendientes de andén.'],
+  ['Suavizado del DEM','40 m por la red','Supuesto','Promedio de la elevación de los nodos a 40 m o menos; reduce el ruido del DEM. Elegido tras observar el ruido en Rionegro; no está calibrado.'],
+  ['Tramos sobre la pendiente máxima','tiempo × 3 (o bloqueo)','Supuesto','Por defecto se penaliza y no se bloquea: con un DEM de 10–30 m, bloquear fragmenta la red por ruido del DEM (en Rionegro, la red alcanzable a pie con bastón pasó de 88 % a 12 %). Editable por perfil.'],
+  ['Velocidad vehicular por clase de vía','70/55/40/35/30/25/20 km/h','Supuesto','De motorway a residential; con maxspeed, 0,7 × maxspeed con tope de 1,4 × la velocidad de la clase; ×0,6 sin pavimento.']
+];
+const LIMITES=[
+  'La red de OpenStreetMap puede no tener andenes ni superficies etiquetados; donde falta la etiqueta, el modelo supone que el tramo se puede transitar.',
+  'Con un DEM de 10 a 30 m las pendientes de tramos cortos son aproximadas; no aparecen bordillos, rampas ni cruces.',
+  'El bus es una aproximación por frecuencia media: no usa horarios ni la accesibilidad real de la flota. Si OpenStreetMap no trae rutas, se aproxima sobre las vías arteriales.',
+  'Los tiempos son de viaje de ida hacia el destino más cercano por el criterio elegido; no incluyen la disponibilidad real del servicio, filas ni citas.',
+  'Los destinos son los equipamientos de OpenStreetMap seleccionados (salud o instituciones educativas, según lo marcado), que no son un inventario de la oferta ni de su capacidad; al cambiar la capa de destinos cambian los resultados, y no son comparables con los de otros análisis que usen otros destinos, velocidades o esperas.',
+  'Las rutas de bus de OpenStreetMap suelen cubrir solo una parte del territorio; donde no hay rutas, el cálculo usa las vías arteriales como aproximación (configurable en «Red de bus»). Un resultado de bus parecido al de la caminata puede deberse a esa falta de datos y no a que el bus no ayude.',
+  'Los tiempos de los perfiles de bastón, andador y silla de ruedas dependen mucho de los supuestos de pendiente y del ruido del DEM; deben leerse como órdenes de magnitud y contrastarse con trabajo de campo.',
+  'La población se reparte en celdas: los puntos van a la celda que los contiene y los polígonos se reparten por igual entre las celdas con red. Si la población proviene de una superficie estimada, las cifras por celda son estimaciones, no conteos.',
+  'Las celdas a más de 250 m (o 1,5 veces el tamaño de celda) de la red no entran en los porcentajes de área; su población se informa aparte como «sin red cercana».'
+];
+function mapaPNG(){
+  const ma=metricArrays(),g=S.grid,n=S.net;if(!ma||!g)return null;
+  const W=1100,wD=g.cols*g.dO,hD=g.rows*g.dA,kx=Math.cos(((g.a1+g.a1-g.rows*g.dA)/2)*Math.PI/180),H=Math.max(300,Math.round(W*hD/(wD*kx)));
+  const X=o=>(o-g.o0)/wD*W,Y=a=>(g.a1-a)/hD*H;
+  const cv=document.createElement('canvas');cv.width=W;cv.height=H;const cx=cv.getContext('2d');cx.fillStyle='#fff';cx.fillRect(0,0,W,H);
+  const th=bandsFor(ma.m),cols=rampN(ma.m==='gap'?RAMP_GAP:RAMP,th.length+1),noc=hex2rgb(C_NOACC),exc=hex2rgb(C_EXCL);
+  const sm=document.createElement('canvas');sm.width=g.cols;sm.height=g.rows;const sx=sm.getContext('2d'),img=sx.createImageData(g.cols,g.rows);
+  for(let i=0;i<g.NC;i++){const v=ma.cell[i];if(v!==v)continue;const b=bandOf(v,th),c=b===-1?noc:b===-2?exc:cols[b];
+    img.data[i*4]=c[0];img.data[i*4+1]=c[1];img.data[i*4+2]=c[2];img.data[i*4+3]=b===-1?140:255;}
+  sx.putImageData(img,0,0);cx.imageSmoothingEnabled=false;cx.globalAlpha=.85;cx.drawImage(sm,0,0,W,H);cx.globalAlpha=1;
+  cx.lineWidth=.7;cx.strokeStyle='rgba(40,40,40,.45)';cx.beginPath();
+  for(let e=0;e<n.M;e++){cx.moveTo(X(n.lon[n.ea[e]]),Y(n.lat[n.ea[e]]));cx.lineTo(X(n.lon[n.eb[e]]),Y(n.lat[n.eb[e]]));}cx.stroke();
+  cx.lineWidth=1.6;cx.strokeStyle='#111';cx.setLineDash([6,4]);for(const r of n.boundary){cx.beginPath();r.forEach(([a,o],k)=>k?cx.lineTo(X(o),Y(a)):cx.moveTo(X(o),Y(a)));cx.stroke();}cx.setLineDash([]);
+  cx.textAlign='center';cx.font='600 15px sans-serif';cx.lineWidth=4;cx.strokeStyle='rgba(255,255,255,.9)';cx.fillStyle='#111';
+  for(const b of (n.bnames||[])){const t=b.name.toUpperCase();cx.strokeText(t,X(b.lon),Y(b.lat));cx.fillText(t,X(b.lon),Y(b.lat));}
+  for(const d of S.dests){if(!d.on)continue;cx.beginPath();cx.arc(X(d.lon),Y(d.lat),7,0,6.2832);cx.fillStyle='#d11a2a';cx.fill();cx.lineWidth=2;cx.strokeStyle='#fff';cx.stroke();}
+  // leyenda
+  const u=UNIT[ma.m],fmt=x=>ma.m==='d'?fmtKm(x):(u==='COP'?fmtCOP(x):x+' '+u);
+  const lab=b=>b===0?'≤ '+fmt(th[0]):b===th.length?'> '+fmt(th[th.length-1]):fmt(th[b-1]).replace(/ (min|COP)$/,'')+' – '+fmt(th[b]);
+  const rows=th.length+2,lh=20,bw=190,bh=rows*lh+34,bx=W-bw-14,by=H-bh-14;
+  cx.fillStyle='rgba(255,255,255,.93)';cx.fillRect(bx,by,bw,bh);cx.strokeStyle='#888';cx.lineWidth=1;cx.strokeRect(bx,by,bw,bh);
+  cx.fillStyle='#111';cx.font='600 13px sans-serif';cx.fillText(ma.m==='gap'?'Brecha de tiempo':$('#selMetric').selectedOptions[0].text,bx+10,by+20);cx.font='12px sans-serif';
+  for(let b=0;b<=th.length;b++){cx.fillStyle=`rgb(${cols[b].join(',')})`;cx.fillRect(bx+10,by+30+b*lh,16,13);cx.fillStyle='#111';cx.fillText(lab(b),bx+34,by+41+b*lh);}
+  cx.fillStyle=`rgba(${noc.join(',')},.6)`;cx.fillRect(bx+10,by+30+(th.length+1)*lh,16,13);cx.fillStyle='#111';cx.fillText('Sin acceso',bx+34,by+41+(th.length+1)*lh);
+  // escala
+  const mW=300/ (111320*kx),px=mW/wD*W;cx.fillStyle='#111';cx.fillRect(16,H-22,px,4);cx.font='12px sans-serif';cx.fillText('300 m',16,H-28);
+  return cv.toDataURL('image/png');
+}
+function informeHTML(){
+  const n=S.net,P0=P(),act=PROFILES.filter(p=>p.on&&S.res[p.id]);if(!n||!act.length)return null;
+  const g=S.grid,fecha=new Date().toLocaleDateString('es-CO',{year:'numeric',month:'long',day:'numeric'});
+  let km=0;for(let e=0;e<n.M;e++)km+=n.len[e];let withZ=0;for(let i=0;i<n.N;i++)if(n.elev[i]===n.elev[i])withZ++;
+  const dests=S.dests.filter(d=>d.on),png=mapaPNG(),pid=$('#selProf').value,pn=PROFILES.find(p=>p.id===pid);
+  const tabla=(hd,rows)=>`<table><thead><tr>${hd.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map((c,i)=>`<td${i?' class="n"':''}>${c}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+  const area=tabla(['Perfil','≤15 min','≤30 min','≤60 min','Sin acceso','Tiempo medio','Distancia media','Costo medio'],
+    act.map(p=>{const s=S.res[p.id].st;return [esc(p.nombre)+(p.grupo==='pmr'?' (PMR)':''),fmtPct(s.t15/s.tot),fmtPct(s.t30/s.tot),fmtPct(s.t60/s.tot),fmtPct((s.tot-s.reach)/s.tot),fmtMin(s.mT),fmtKm(s.mD),fmtCOP(s.mM)];}));
+  let pob='';
+  if(S.pop&&act.every(p=>S.res[p.id].ps)){
+    pob=`<h2>Personas según el tiempo de viaje</h2><p>Población cargada: <b>${esc(S.pop.name)}</b>. Los perfiles de movilidad reducida usan el campo «${esc(S.pop.fPmr||S.pop.fTot)}»; los demás, «${esc(S.pop.fTot)}». Todas las categorías suman el total de cada columna de población.</p>`+
+      tabla(['Perfil','Población','≤15 min','≤30 min','≤60 min','Sin acceso','Sin red cercana','Fuera del límite'],
+        act.map(p=>{const s=S.res[p.id].ps,pc=x=>fmtN(x)+' ('+fmtPct(s.total?x/s.total:NaN)+')';return [esc(p.nombre),fmtN(s.total),pc(s.t15),pc(s.t30),pc(s.t60),pc(s.sinAcceso),pc(s.sinRed),pc(s.fuera)];}));
+  }
+  // brecha: cada perfil PMR frente al perfil de referencia del mismo tipo de viaje
+  const fam=p=>p.modo==='vehiculo'?'veh':p.modo==='bus'?'bus':'pie',brecha=[];
+  for(const p of act.filter(p=>p.grupo==='pmr')){const r=act.find(q=>q.grupo==='ref'&&fam(q)===fam(p));if(!r)continue;
+    const a=S.res[r.id].st,b=S.res[p.id].st,ratio=b.mT/a.mT;
+    let fila=[esc(p.nombre),esc(r.nombre),fmtPct(a.t30/a.tot),fmtPct(b.t30/b.tot),isFinite(ratio)?ratio.toFixed(2)+'×':'—',fmtCOP(S.res[p.id].st.mM-S.res[r.id].st.mM)];
+    if(S.pop&&S.res[p.id].ps&&S.res[r.id].ps){const pa=S.res[r.id].ps,pb=S.res[p.id].ps;fila.push(fmtN(pb.t30)+' de '+fmtN(pb.total));}brecha.push(fila);}
+  const hdB=['Perfil PMR','Referencia','≤30 min (ref.)','≤30 min (PMR)','Tiempo medio PMR ÷ ref.','Diferencia de costo medio'];if(S.pop)hdB.push('Personas PMR a ≤30 min');
+  const br=brecha.length?tabla(hdB,brecha):'<p>No hay un perfil de movilidad reducida con su referencia activo.</p>';
+  return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Informe de isócronas inversas — ${esc(n.name)}</title>
+<style>body{font:15px/1.55 Georgia,serif;color:#1c1c1c;max-width:980px;margin:0 auto;padding:24px 18px 60px}h1{font-size:26px;margin:.2em 0}h2{font-size:19px;margin:1.6em 0 .4em;border-bottom:1px solid #bbb;padding-bottom:3px}
+table{border-collapse:collapse;width:100%;font:13px/1.4 system-ui,sans-serif;margin:.6em 0}th,td{border:1px solid #ccc;padding:4px 7px;text-align:left;vertical-align:top}th{background:#eee}td.n{text-align:right;font-variant-numeric:tabular-nums}
+img{max-width:100%;border:1px solid #bbb}.nota{font:13px/1.45 system-ui,sans-serif;color:#555}.sup{background:#fff3cd}</style></head><body>
+<p class="nota">Simulador de isócronas inversas · ${fecha}${EQUIPO.length?' · '+esc(EQUIPO.join(', ')):''} · ${esc(CURSO)}</p><h1>Accesibilidad a los centros de atención: ${esc(n.name)}</h1>
+<p>Para cada celda de ${g.cs} m del territorio se calcula el tiempo, la distancia y el costo de llegar al centro de atención activo más cercano, con la red vial de ${n.source==='demo'?'demostración (no corresponde a un territorio real)':'OpenStreetMap'} y varios perfiles de viaje. El cálculo parte de los destinos y recorre la red en sentido contrario, de modo que una sola búsqueda por perfil resuelve todos los orígenes. Las pendientes salen del DEM después de suavizar la elevación sobre la red.</p>
+<h2>Territorio y red</h2><p>${n.N.toLocaleString('es-CO')} nodos, ${n.M.toLocaleString('es-CO')} tramos y ${(km/1000).toFixed(0)} km de red. Elevación disponible en ${fmtPct(withZ/n.N)} de los nodos${withZ?'':' (sin pendientes)'}. Grilla de ${g.cols}×${g.rows} celdas de ${g.cs} m. ${(()=>{let kb=0,ka=0,kt=0;for(let e=0;e<n.M;e++){kt+=n.len[e];if(n.flags[e]&F.BUS)kb+=n.len[e];if(n.flags[e]&F.ART)ka+=n.len[e];}return `Rutas de bus de OSM: ${fmtPct(kb/kt)} de la red; vías arteriales: ${fmtPct(ka/kt)}. Red de bus usada en el cálculo: ${{ambas:'rutas de OSM y vías arteriales',osm:'solo rutas de OSM',arterial:'solo vías arteriales'}[P0.busRed]}. Suavizado del DEM: ${P0.suav} m.`;})()} Criterio de minimización: ${P0.crit==='t'?'tiempo':'costo generalizado'}.</p>
+<h2>Destinos activos (${dests.length})</h2><p>${dests.map(d=>esc(d.name)).join('; ')||'—'}</p>
+${png?`<h2>Mapa: ${esc(pn?pn.nombre:'')} — ${esc($('#selMetric').selectedOptions[0].text)}</h2><img alt="Mapa de la variable seleccionada" src="${png}"><p class="nota">Puntos rojos: destinos. Línea discontinua: límite municipal. El mapa base no se incluye.</p>`:''}
+<h2>Porcentaje del área con red según el tiempo de viaje</h2>${area}
+${pob}
+${S.crono?`<h2>Cartograma de tiempo hasta un destino</h2><p>Destino: ${esc(S.crono.destino)}. Radio = minutos de viaje por la red; ángulo = dirección desde el destino; el color es la banda de tiempo de «${esc(S.crono.a)}», de modo que se ve cuánto se encoge el territorio accesible para «${esc(S.crono.b)}». Los dos paneles usan la misma escala (${S.crono.T} min).</p><img alt="Cartograma de tiempo" src="${S.crono.png}">`:''}
+<h2>Brecha entre perfiles de movilidad reducida y de referencia</h2>${br}
+<h2>Parámetros de los perfiles</h2>
+${tabla(['Perfil','Modo','Grupo','Velocidad (km/h)','Pendiente máx. (%)','Escaleras','Sin andén','Sin pavimento','Espera + abordaje (min)','Personas'],
+  act.map(p=>[esc(p.nombre),esc(MODOS[p.modo]),p.grupo==='pmr'?'Movilidad reducida':'Sin limitación',p.v0,p.modo==='vehiculo'?'—':(p.pendMax>=100?'sin límite':p.pendMax+(p.pendModo==='bloquear'?' (bloquea)':' (tiempo × '+p.penPend+')')),p.modo==='vehiculo'?'—':(p.esc||'no puede'),p.modo==='vehiculo'?'—':p.sinAnden,p.modo==='vehiculo'?'—':p.sinPav,p.modo==='bus'?p.espera+' + '+p.abordaje:p.modo==='vehiculo'?p.terminal:'—',p.personas]))}
+<h2>Origen de los valores</h2>
+${tabla(['Parámetro','Valor','Tipo','Fuente o nota'],FUENTES.map(f=>[f[0],f[1],`<span${f[2]==='Supuesto'?' class="sup"':''}>${f[2]}</span>`,f[3]]))}
+<p class="nota">Los valores marcados como supuesto son decisiones de modelación y pueden cambiarse en el panel de perfiles; los resultados dependen de ellos. Valor del tiempo usado: ${fmtCOP(P0.smmlv/P0.horas)} por hora y persona.</p>
+<h2>Método</h2>
+<p>Búsqueda de Dijkstra inversa con varios orígenes: todos los destinos parten con costo cero y la búsqueda avanza contra el sentido del viajero, respetando las pendientes y las vías de un solo sentido para vehículos. A pie, la velocidad sigue la función de Tobler normalizada, v = v₀·e^(−3,5·|g+0,05|)/e^(−0,175). En silla de ruedas, la velocidad en subida es v₀·máx(0,15; 1 − k·g) y en bajada v₀·máx(0,5; 1 + 3·g); los tramos con pendiente mayor que el máximo del perfil se penalizan multiplicando su tiempo (por defecto ×3), salvo que el perfil esté configurado para bloquearlos. El bus se modela con dos capas, caminata y bus: abordar cuesta la espera, el tiempo de abordaje y el pasaje; bajar cuesta el tiempo de descenso. Cada destino y cada celda se ancla al nodo más cercano que el modo de viaje puede usar. El costo generalizado es el costo monetario más el tiempo por el valor del tiempo y por el número de personas que viajan.</p>
+<h2>Límites</h2><ul>${LIMITES.map(l=>`<li>${esc(l)}</li>`).join('')}</ul>
+</body></html>`;
+}
+function expInforme(){const h=informeHTML();if(!h)return toast('Calcula primero las isócronas.');saveFile(`informe_${slug()}.html`,h,'text/html');}
+
+/* =================== persistencia en el artifact =================== */
+async function initPersist(){
+  const [db,as]=await Promise.all([cap('db'),cap('assets')]);
+  if(db&&as)$('#btnSave').hidden=false;
+  if(!db)return false;
+  try{const snap=await db.doc('escenario/actual').get();if(!snap.exists)return false;const d=snap.data();
+    if(d.perfiles)PROFILES=d.perfiles.map(p=>({...PDEF,...p}));
+    if(d.params){$('#selCrit').value=d.params.crit||'t';$('#inCell').value=d.params.cell||100;$('#inSMMLV').value=d.params.smmlv||1750905;$('#inHoras').value=d.params.horas||180;}
+    if(d.municipio)$('#inMun').value=d.municipio;if(d.departamento)$('#inDep').value=d.departamento;
+    renderProfiles();updateVOT();
+    if(d.redAsset){$('#netStatus').textContent='Cargando red guardada…';const r=await fetch('/_blob/'+d.redAsset);if(!r.ok)throw new Error('No se encontró la red guardada.');
+      if(d.popAsset){try{const rp=await fetch('/_blob/'+d.popAsset);if(rp.ok){const pj=await rp.json();setPopRaw(pj.rows,pj.name,d.popSel);}}catch(e){console.warn('población guardada',e);}}
+      setNet(deserializeNet(await r.json()),{dests:d.destinos||[]});toast('Escenario guardado cargado');return true;}
+  }catch(e){console.warn(e);$('#netStatus').textContent='No se pudo leer el escenario guardado: '+(e.message||e.code);}
+  return false;
+}
+async function saveScenario(){
+  const [db,as]=await Promise.all([cap('db'),cap('assets')]);if(!db||!as||!S.net)return;
+  const b=$('#btnSave');b.disabled=true;b.textContent='Guardando…';
+  try{let old=null;try{const s=await db.doc('escenario/actual').get();if(s.exists)old=s.data().redAsset;}catch(e){}
+    let oldPop=null;try{const s=await db.doc('escenario/actual').get();if(s.exists)oldPop=s.data().popAsset||null;}catch(e){}
+    const up=await as.upload(new Blob([serializeNet()],{type:'application/json'}),{type:'application/json'});
+    let upPop=null;if(S.popRaw)upPop=await as.upload(new Blob([JSON.stringify({name:S.popRaw.name,rows:S.popRaw.rows})],{type:'application/json'}),{type:'application/json'});
+    await db.doc('escenario/actual').set({redAsset:up.id,popAsset:upPop?upPop.id:null,popSel:S.pop?{tot:S.pop.fTot,pmr:S.pop.fPmr}:null,redNombre:S.net.name,municipio:$('#inMun').value,departamento:$('#inDep').value,
+      destinos:S.dests.map(({id,name,tipo,lat,lon,on,origen})=>({id,name,tipo,lat,lon,on,origen})),perfiles:PROFILES,params:P(),guardado:new Date().toISOString()});
+    if(old&&old!==up.id){try{await as.delete(old);}catch(e){}}
+    if(oldPop&&(!upPop||oldPop!==upPop.id)){try{await as.delete(oldPop);}catch(e){}}
+    toast('Escenario guardado: quien abra el artifact verá esta red, destinos y perfiles');
+  }catch(e){toast('No se pudo guardar: '+(e.message||e.code||e));}
+  finally{b.disabled=false;b.textContent='Guardar escenario en el artifact';}
+}
+
+/* =================== eventos =================== */
+$('#btnOSM').onclick=downloadOSM;
+$('#fileNet').onchange=e=>{const f=e.target.files[0];if(f)loadNetFile(f);e.target.value='';};
+$('#btnCopyQ').onclick=()=>{const q=$('#qText').textContent;navigator.clipboard.writeText(q).then(()=>toast('Consulta copiada'),()=>{const r=document.createRange();r.selectNodeContents($('#qText'));const s=getSelection();s.removeAllRanges();s.addRange(r);toast('Selecciona y copia con Ctrl+C');});};
+$('#btnDEM').onclick=demTerrarium;
+$('#fileDEM').onchange=e=>{const f=e.target.files[0];if(f)demGeoTiff(f);e.target.value='';};
+$('#btnSave').onclick=saveScenario;
+$('#btnExpNet').onclick=()=>S.net&&saveFile(`red_${slug()}.json`,serializeNet(),'application/json');
+$('#btnAddMode').onclick=()=>{S.addMode=!S.addMode;$('#btnAddMode').classList.toggle('on',S.addMode);$('#btnAddMode').textContent=S.addMode?'Haz clic en el mapa… (salir)':'Agregar con clic en el mapa';map.getContainer().style.cursor=S.addMode?'crosshair':'';};
+$('#fileCSV').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;try{const ds=parseCSV(await f.text());S.dests.push(...ds);renderDests();toast(`${ds.length} destinos cargados`);scheduleCalc();}catch(err){toast(err.message);}};
+$('#btnAllOSM').onclick=()=>{S.dests.forEach(d=>d.on=true);renderDests();scheduleCalc();};
+$('#btnOnlyHealth').onclick=()=>{S.dests.forEach(d=>d.on=!isEdu(d)&&d.origen==='osm'?DEFAULT_DEST.test(d.tipo||''):d.on&&!isEdu(d));renderDests();scheduleCalc();};
+$('#btnOnlyEdu').onclick=()=>{S.dests.forEach(d=>d.on=isEdu(d));renderDests();scheduleCalc();};
+$('#btnNoneOSM').onclick=()=>{S.dests.forEach(d=>d.on=false);renderDests();scheduleCalc();};
+$('#destList').addEventListener('change',e=>{const i=e.target.dataset.i;if(i!=null){S.dests[i].on=e.target.checked;renderDests();scheduleCalc();}});
+$('#destList').addEventListener('click',e=>{const i=e.target.dataset.del;if(i!=null){e.preventDefault();S.dests.splice(+i,1);renderDests();scheduleCalc();}});
+$('#profList').addEventListener('click',e=>{if(e.target.dataset.on!=null)e.stopPropagation();const i=e.target.dataset.delp;if(i!=null){PROFILES.splice(+i,1);renderProfiles();scheduleCalc();}});
+$('#profList').addEventListener('change',e=>{const t=e.target;
+  if(t.dataset.on!=null){PROFILES[+t.dataset.on].on=t.checked;renderProfiles();scheduleCalc();return;}
+  const i=t.dataset.p,k=t.dataset.k;if(i==null)return;const p=PROFILES[+i];
+  p[k]=t.type==='number'?(+t.value||0):t.value;
+  if(k==='modo'||k==='marcha'||k==='grupo'||k==='nombre'||k==='pendModo')renderProfiles();
+  scheduleCalc();});
+$('#btnAddProf').onclick=()=>{const src=PROFILES.find(p=>p.id===$('#selProf').value)||PROFILES[0];const id='u'+Math.random().toString(36).slice(2,7);
+  PROFILES.push({...src,id,nombre:src.nombre+' (variante)',color:COLORS[PROFILES.length%COLORS.length],on:true});renderProfiles();
+  const d=document.querySelector(`details[data-id="${id}"]`);if(d)d.open=true;scheduleCalc();};
+$('#btnCalc').onclick=()=>runCalc();
+$('#filePop').onchange=e=>{const f=e.target.files[0];e.target.value='';if(f)loadPopFile(f);};
+$('#btnPopClear').onclick=()=>{S.popRaw=null;S.pop=null;S.popGrid=null;$('#popFields').hidden=true;$('#btnPopClear').hidden=true;renderPopStatus();renderAll();scheduleCalc(50);};
+['#selPopTot','#selPopPmr'].forEach(s=>$(s).addEventListener('change',applyPop));
+$('#selTbl').onchange=e=>{S.tblBase=e.target.value;renderTable();};
+['#selCrit','#inCell','#inSMMLV','#inHoras','#inSuav','#selBusRed'].forEach(s=>$(s).addEventListener('change',()=>{updateVOT();scheduleCalc();}));
+$('#selMetric').onchange=()=>{syncBandsInput();drawGrid();};
+['#selProf','#selCmp'].forEach(s=>$(s).addEventListener('change',()=>{renderTable();drawGrid();if(S.queryLL)doQuery(S.queryLL);}));
+$('#inBands').addEventListener('change',drawGrid);
+['#chkGrid','#chkNetColor'].forEach(s=>$(s).addEventListener('change',drawGrid));
+$('#chkNames').onchange=drawNames;
+$('#chkSteps').onchange=e=>{if(!S.layers.steps)return;e.target.checked?S.layers.steps.addTo(map):map.removeLayer(S.layers.steps);};
+$('#selBase').onchange=e=>setBase(e.target.value);
+$('#rngOp').oninput=e=>{if(S.layers.grid)S.layers.grid.setOpacity(+e.target.value);};
+$('#tblRes').addEventListener('click',e=>{const tr=e.target.closest('tr[data-pid]');if(!tr)return;$('#selProf').value=tr.dataset.pid;renderTable();drawGrid();if(S.queryLL)doQuery(S.queryLL);});
+$('#btnCrono').onclick=cronoDibujar;$('#btnCronoPng').onclick=cronoPng;$('#btnExpCSV').onclick=expCSV;$('#btnExpASC').onclick=expASC;$('#btnExpDest').onclick=expDest;$('#btnExpParams').onclick=expParams;$('#btnExpInforme').onclick=expInforme;
+$('#btnOrigen').onclick=consultarOrigen;['#inpOLat','#inpOLon'].forEach(i=>$(i).addEventListener('keydown',e=>{if(e.key==='Enter')consultarOrigen();}));
+map.on('click',e=>{
+  if(S.addMode){const nm='Destino '+(S.dests.filter(d=>d.origen==='manual').length+1);
+    S.dests.push({id:'m'+Date.now(),name:nm,tipo:'manual',lat:e.latlng.lat,lon:e.latlng.lng,on:true,origen:'manual'});renderDests();scheduleCalc();return;}
+  doQuery(e.latlng);});
+const onTheme=()=>{if(baseKey==='claro')setBase('claro');if(S.net){drawNetwork();renderAll();}};
+const mo=new MutationObserver(onTheme);
+mo.observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',onTheme);
+
+/* =================== créditos =================== */
+const EQUIPO=['Gustavo Cano','David Gómez','Diego Hoyos','Juan J. Pérez'];  // nombres del equipo, uno por elemento
+const CURSO='Investigación para el curso Laboratorio II de la Maestría en Procesos Urbanos y Ambientales de la Universidad EAFIT';
+$('#credits').innerHTML=(EQUIPO.length?`<b>${EQUIPO.map(esc).join(' · ')}</b>`:'')+esc(CURSO);
+
+/* =================== inicio =================== */
+$('#qText').textContent=overpassQuery();
+renderProfiles();updateVOT();syncBandsInput();
+setNet(demoNet(),{});
+setTimeout(()=>{if(S.net&&S.net.source==='demo'&&!S.queryLL&&S.grid){const n=S.net;doQuery(L.latLng(n.lat[5*34+28],n.lon[5*34+28]));}},900);
+initPersist();
+</script>
+
+</body>
+</html>
