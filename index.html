@@ -796,6 +796,9 @@ pre.q{font:11px/1.45 var(--f-mono);background:var(--soft);border-radius:4px;padd
         <button class="primary" id="btnOSM">Descargar de OpenStreetMap</button>
         <span class="btn file">Cargar archivo de red<input type="file" id="fileNet" accept=".json,.geojson,application/json"></span>
       </div>
+      <div class="row" id="rowValle" hidden>
+        <button id="btnValle">Cargar red del Valle de San Nicolás (8 municipios)</button>
+      </div>
       <div id="osmHelp" hidden>
         <p class="note warn">Esta vista no permite conexiones a servidores externos. Ejecuta la consulta en overpass-turbo, exporta el resultado como «raw OSM data» (JSON) y cárgalo con el botón de arriba.</p>
         <pre class="q" id="qText"></pre>
@@ -835,6 +838,7 @@ pre.q{font:11px/1.45 var(--f-mono);background:var(--soft);border-radius:4px;padd
       <h2>Población <small id="popSmall"></small></h2>
       <div class="row">
         <span class="btn file">Cargar CSV o GeoJSON<input type="file" id="filePop" accept=".csv,.txt,.json,.geojson,application/json"></span>
+        <button id="btnPopValle" hidden>Cargar población del Valle</button>
         <button id="btnPopClear" hidden>Quitar población</button>
       </div>
       <div class="grid2" id="popFields" hidden>
@@ -1945,6 +1949,18 @@ async function saveScenario(){
 }
 
 /* =================== eventos =================== */
+// Datos del Valle alojados junto a la página (solo si se sirve por http/https): evitan depender de Overpass, que a menudo responde 429/502/504.
+async function fetchGz(url,name){
+  const r=await fetch(url);if(!r.ok)throw new Error('No se pudo leer '+url+' ('+r.status+')');
+  const blob=url.endsWith('.gz')?await new Response(r.body.pipeThrough(new DecompressionStream('gzip'))).blob():await r.blob();
+  return new File([blob],name);}
+if(/^https?:$/.test(location.protocol)){$('#rowValle').hidden=false;$('#btnPopValle').hidden=false;}
+$('#btnValle').onclick=async()=>{const b=$('#btnValle');b.disabled=true;try{$('#netStatus').textContent='Cargando la red del Valle de San Nicolás…';
+  await loadNetFile(await fetchGz('datos/valle_osm.json.gz','Valle de San Nicolás'));}
+  catch(e){$('#netStatus').textContent='Error: '+e.message;}finally{b.disabled=false;}};
+$('#btnPopValle').onclick=async()=>{try{$('#popStatus').textContent='Cargando población del Valle…';
+  await loadPopFile(await fetchGz('datos/poblacion_valle_san_nicolas_estimada.csv','poblacion_valle_san_nicolas_estimada.csv'));}
+  catch(e){$('#popStatus').textContent='Error: '+e.message;}};
 $('#btnOSM').onclick=downloadOSM;
 $('#fileNet').onchange=e=>{const f=e.target.files[0];if(f)loadNetFile(f);e.target.value='';};
 $('#btnCopyQ').onclick=()=>{const q=$('#qText').textContent;navigator.clipboard.writeText(q).then(()=>toast('Consulta copiada'),()=>{const r=document.createRange();r.selectNodeContents($('#qText'));const s=getSelection();s.removeAllRanges();s.addRange(r);toast('Selecciona y copia con Ctrl+C');});};
