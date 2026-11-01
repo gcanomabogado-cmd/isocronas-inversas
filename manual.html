@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Manual de uso · Isócronas inversas</title>
+<style>
+:root{--bg:#fbfaf7;--fg:#1d2624;--muted:#5c6a66;--accent:#0f6a73;--line:#d9dfdc;--card:#f1f4f2}
+@media (prefers-color-scheme:dark){:root{--bg:#0e1412;--fg:#e6ece9;--muted:#9fb0aa;--accent:#4fb3ba;--line:#2a3733;--card:#16201d}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:760px;margin:0 auto;padding:32px 16px 64px}
+h1{font-size:30px;line-height:1.15;margin:0 0 6px}
+h2{font-size:21px;margin:36px 0 8px;padding-top:12px;border-top:1px solid var(--line)}
+h3{font-size:16px;margin:20px 0 4px}
+p,li{margin:6px 0}
+.sub{color:var(--muted);margin:0 0 6px}
+.cred{color:var(--muted);font-size:14px}
+ol,ul{padding-left:22px}
+.paso{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin:10px 0}
+.tip{border-left:4px solid var(--accent);background:var(--card);padding:8px 14px;margin:12px 0;border-radius:0 6px 6px 0}
+kbd,.btn{font:600 13px system-ui;border:1px solid var(--line);background:var(--card);border-radius:4px;padding:1px 7px;white-space:nowrap}
+dl{margin:0}dt{font-weight:700;margin-top:12px}dd{margin:2px 0 0 0;color:var(--fg)}
+a{color:var(--accent)}
+nav ul{columns:2;list-style:none;padding:0}
+@media print{h2{break-after:avoid}.paso,.tip{break-inside:avoid}}
+</style>
+</head>
+<body>
+<main>
+<h1>Manual de uso: Isócronas inversas</h1>
+<p class="sub">Cómo ver cuánto tarda, cuánto cuesta y qué tan lejos queda llegar a un servicio desde cualquier punto del territorio.</p>
+<p class="cred">Gustavo Cano · David Gómez · Diego Hoyos · Juan J. Pérez<br>Investigación para el curso Laboratorio II de la Maestría en Procesos Urbanos y Ambientales de la Universidad EAFIT</p>
+
+<nav><ul>
+<li><a href="#que">1. Qué hace la aplicación</a></li>
+<li><a href="#rapido">2. Inicio rápido (5 pasos)</a></li>
+<li><a href="#leer">3. Cómo leer el mapa</a></li>
+<li><a href="#origen">4. Consultar un origen</a></li>
+<li><a href="#destinos">5. Cambiar los destinos</a></li>
+<li><a href="#perfiles">6. Perfiles de viaje</a></li>
+<li><a href="#cartograma">7. Cartograma de tiempo</a></li>
+<li><a href="#guardar">8. Descargar resultados</a></li>
+<li><a href="#problemas">9. Si algo no funciona</a></li>
+<li><a href="#glosario">10. Glosario</a></li>
+</ul></nav>
+
+<h2 id="que">1. Qué hace la aplicación</h2>
+<p>Normalmente se pregunta «¿cuánto tarda en llegar alguien desde su casa?». Esta aplicación hace la pregunta al revés: parte de los <b>destinos conocidos</b> (por ejemplo, hospitales, clínicas o colegios) y calcula, para <b>cada celda del territorio</b>, cuánto tiempo, qué distancia y qué costo implica llegar al destino más cercano.</p>
+<p>Lo hace para varios perfiles de viaje: personas sin limitación y personas con movilidad reducida (silla de ruedas, bastón, adultos mayores), a pie, en taxi o en bus. Así se ve quién queda lejos y cuánto cambia el acceso según cómo se mueva cada persona.</p>
+
+<h2 id="rapido">2. Inicio rápido (5 pasos)</h2>
+<div class="paso"><b>Paso 1. Cargar la red vial.</b> En la columna izquierda, sección <b>Red vial</b>, pulsa <span class="btn">Cargar red del Valle de San Nicolás (8 municipios)</span>. Espera unos segundos: se cargan las calles y caminos de los ocho municipios.</div>
+<div class="paso"><b>Paso 2. Cargar la población (opcional).</b> En la sección <b>Población</b>, pulsa <span class="btn">Cargar población del Valle</span>. Con esto los resultados también se expresan en número de personas.</div>
+<div class="paso"><b>Paso 3. Elegir los destinos.</b> En <b>Destinos</b> están marcados por defecto los de salud (hospitales, clínicas, rehabilitación y fisioterapia). Para analizar colegios, pulsa <span class="btn">Solo instituciones educativas</span>. Para volver a salud, <span class="btn">Solo salud</span>.</div>
+<div class="paso"><b>Paso 4. Calcular.</b> La aplicación recalcula sola cuando cambias algo. Si no lo hace, pulsa <span class="btn">Calcular</span> en <b>Perfiles de viaje</b>. Verás el resultado como una superficie de colores sobre el mapa.</div>
+<div class="paso"><b>Paso 5. Explorar.</b> Haz clic en cualquier punto del mapa para ver la ruta al destino más cercano y la tabla de tiempos de cada perfil.</div>
+<div class="tip"><b>Recomendación:</b> después de cargar la red, pulsa <span class="btn">Descargar DEM</span> en la sección de red. Así se tienen en cuenta las pendientes del terreno, que importan mucho para sillas de ruedas y bastones. Sin DEM, los resultados no consideran la pendiente.</div>
+
+<h2 id="leer">3. Cómo leer el mapa</h2>
+<ul>
+<li><b>Colores de la superficie:</b> cada color es una banda de tiempo (o de distancia o costo, según lo que elijas). Los tonos oscuros son los más cercanos al destino; los cálidos son los más lejanos. La leyenda indica los valores.</li>
+<li><b>Puntos de colores grandes:</b> son los destinos activos. Los de salud se ven en verde azulado y los educativos en ámbar.</li>
+<li><b>Sección «Visualización»:</b> elige el <b>perfil</b> y la <b>variable</b> (tiempo, distancia, costo monetario, costo generalizado, o brecha entre dos perfiles). También puedes cambiar el mapa base, la opacidad y los cortes de las bandas.</li>
+<li><b>Brecha:</b> al elegir «Brecha de tiempo frente a…» el mapa muestra cuánto más tarda un perfil (por ejemplo, silla de ruedas) respecto de otro (a pie sin limitación). Es la forma más directa de ver la desigualdad de acceso.</li>
+<li><b>Tabla «Comparación de perfiles»:</b> resume qué porción del área (o cuántas personas, si cargaste población) queda dentro de cada rango de tiempo, para cada perfil.</li>
+</ul>
+
+<h2 id="origen">4. Consultar un origen</h2>
+<p>Hay dos formas de preguntar por un punto concreto:</p>
+<ol>
+<li><b>Con un clic en el mapa.</b> Aparece un panel con el tiempo, la distancia y el costo de cada perfil, y se dibuja la ruta hasta el destino.</li>
+<li><b>Escribiendo las coordenadas.</b> En <b>Comparación de perfiles</b> escribe la latitud y la longitud (por ejemplo <kbd>6,15500</kbd> y <kbd>-75,37000</kbd>) y pulsa <span class="btn">Consultar origen</span>. Acepta coma o punto decimal. Si los dos valores están invertidos, la aplicación los intercambia y avisa.</li>
+</ol>
+<p>Para cambiar la ruta dibujada a otro perfil, elígelo en «Visualización».</p>
+
+<h2 id="destinos">5. Cambiar los destinos</h2>
+<ul>
+<li><b>Marcar o desmarcar</b> destinos con las casillas de la lista. Puedes usar «Marcar todos» y «Desmarcar todos».</li>
+<li><b>Agregar un destino:</b> pulsa <span class="btn">Agregar con clic en el mapa</span> y haz clic donde quieras ponerlo.</li>
+<li><b>Cargar varios:</b> con <span class="btn">Cargar CSV</span>, usando un archivo con las columnas <kbd>nombre</kbd>, <kbd>lat</kbd> y <kbd>lon</kbd>.</li>
+<li>Cada vez que cambias los destinos, el cálculo se actualiza solo.</li>
+</ul>
+
+<h2 id="perfiles">6. Perfiles de viaje</h2>
+<p>Un perfil describe cómo se mueve una persona: velocidad, qué pendientes tolera, si puede usar escaleras, y cuánto cuesta y espera si usa taxi o bus. La aplicación trae nueve perfiles:</p>
+<ul>
+<li>A pie, sin limitación (referencia)</li>
+<li>A pie, adulto mayor</li>
+<li>Bastón o andador</li>
+<li>Silla de ruedas manual</li>
+<li>Silla de ruedas motorizada (viene desactivado)</li>
+<li>Taxi, sin limitación</li>
+<li>Taxi accesible, silla de ruedas</li>
+<li>Bus y caminata, sin limitación</li>
+<li>Bus y silla de ruedas</li>
+</ul>
+<p>Todos los valores se pueden editar en la sección <b>Perfiles de viaje</b>. Con <span class="btn">Duplicar perfil activo</span> creas una variante para probar «qué pasaría si…» (por ejemplo, una silla más rápida).</p>
+<div class="tip"><b>Importante:</b> varios valores son supuestos y no mediciones (velocidades, esperas, pendientes máximas). Los resultados sirven para comparar situaciones y detectar brechas, no como tiempos exactos.</div>
+
+<h2 id="cartograma">7. Cartograma de tiempo</h2>
+<p>Es un gráfico circular que muestra el territorio «deformado por el tiempo»: el centro es un destino, la distancia al centro son los <b>minutos de viaje</b> y el color es la banda de tiempo. Se dibujan dos paneles con la misma escala, para comparar, por ejemplo, a pie sin limitación frente a silla de ruedas manual: se ve cuánto se «encoge» el territorio accesible.</p>
+<ol>
+<li>En <b>Cartograma de tiempo</b> elige el destino y los dos perfiles.</li>
+<li>Pulsa <span class="btn">Dibujar</span>.</li>
+<li>Con <span class="btn">Descargar PNG</span> guardas la imagen. Si ya lo dibujaste, también entra al informe.</li>
+</ol>
+
+<h2 id="guardar">8. Descargar resultados</h2>
+<p>Al final de la columna izquierda, en «Comparación de perfiles», están los botones de descarga:</p>
+<ul>
+<li><b>Informe (HTML):</b> un documento con el mapa, las tablas, los parámetros, el método y los límites. Es lo más útil para presentar o compartir.</li>
+<li><b>Grilla CSV:</b> los resultados de cada celda, para abrir en QGIS o Excel.</li>
+<li><b>Ráster ASC:</b> la capa que ves en el mapa, para usarla en sistemas de información geográfica.</li>
+<li><b>Destinos GeoJSON</b> y <b>Parámetros:</b> los destinos activos y los valores de los perfiles.</li>
+</ul>
+
+<h2 id="problemas">9. Si algo no funciona</h2>
+<dl>
+<dt>No aparece la superficie de colores</dt><dd>Comprueba que haya una red cargada y al menos un destino marcado, y pulsa <span class="btn">Calcular</span>.</dd>
+<dt>No se ven los botones del Valle</dt><dd>Solo aparecen cuando la aplicación se abre desde su dirección web. Si la abriste como archivo en tu computador, usa «Cargar archivo de red».</dd>
+<dt>«Descargar de OpenStreetMap» falla o se queda esperando</dt><dd>Los servidores públicos a veces están saturados. Para el Valle usa el botón de carga directa. Para otros municipios, vuelve a intentarlo en unos minutos.</dd>
+<dt>Al hacer clic dice «No hay red vial a menos de 1,5 km»</dt><dd>El punto está lejos de cualquier calle cargada. Haz clic más cerca del territorio estudiado.</dd>
+<dt>Dice «Calcula primero las isócronas»</dt><dd>Aún no hay resultados; pulsa <span class="btn">Calcular</span>.</dd>
+<dt>Todo se ve muy lento</dt><dd>Con ocho municipios hay unas 350.000 celdas. Puedes aumentar el tamaño de la celda de análisis (por ejemplo, de 100 a 200 m) o desmarcar perfiles que no necesites.</dd>
+</dl>
+
+<h2 id="glosario">10. Glosario</h2>
+<dl>
+<dt>Isócrona</dt><dd>Línea que une los puntos desde los que se tarda lo mismo en llegar a un lugar (iso = igual, crono = tiempo).</dd>
+<dt>Isócrona inversa</dt><dd>Lo mismo, pero medido desde el destino hacia afuera: dice cuánto tarda en llegar al destino cada punto del territorio.</dd>
+<dt>Origen / destino</dt><dd>El origen es el punto de partida del viaje. El destino es el lugar al que se quiere llegar (hospital, colegio…).</dd>
+<dt>Perfil de viaje</dt><dd>Conjunto de características de cómo se mueve una persona: modo (a pie, silla, taxi, bus), velocidad, pendientes que tolera y costos.</dd>
+<dt>Movilidad reducida (PMR)</dt><dd>Personas con dificultad para caminar o desplazarse: usuarias de silla de ruedas, bastón o andador, y adultos mayores.</dd>
+<dt>Brecha de acceso</dt><dd>Diferencia entre lo que tarda (o cuesta) llegar a un servicio para un perfil frente a otro, usado como referencia.</dd>
+<dt>Red vial</dt><dd>Conjunto de calles, caminos y senderos por los que se puede viajar, tomado de OpenStreetMap.</dd>
+<dt>OpenStreetMap (OSM)</dt><dd>Mapa libre y colaborativo del mundo, de donde salen la red vial y los destinos. Puede tener datos incompletos.</dd>
+<dt>Overpass</dt><dd>Servicio público que entrega datos de OpenStreetMap. Es el que usa el botón de descarga.</dd>
+<dt>DEM (modelo digital de elevación)</dt><dd>Mapa de alturas del terreno. Permite calcular la pendiente de cada tramo.</dd>
+<dt>Pendiente</dt><dd>Qué tan empinado es un tramo, en porcentaje. Un 10 % significa subir 10 metros por cada 100 recorridos.</dd>
+<dt>Celda (grilla)</dt><dd>Cuadro en que se divide el territorio para calcular (por defecto, de 100 m por lado). Cada celda recibe un resultado.</dd>
+<dt>Banda</dt><dd>Rango de valores con un mismo color en el mapa, por ejemplo «de 10 a 20 minutos».</dd>
+<dt>Costo monetario</dt><dd>Dinero que cuesta el viaje (taxi o pasaje de bus). A pie es cero.</dd>
+<dt>Costo generalizado</dt><dd>Suma del costo monetario y del valor del tiempo empleado. Permite comparar viajes de distinta duración y precio.</dd>
+<dt>VOT (valor del tiempo)</dt><dd>Cuánto vale una hora de una persona en dinero. Aquí se calcula a partir del salario mínimo y las horas de trabajo al mes.</dd>
+<dt>SMMLV</dt><dd>Salario mínimo mensual legal vigente en Colombia.</dd>
+<dt>Cartograma de tiempo</dt><dd>Gráfico circular donde la distancia al centro representa minutos de viaje en lugar de metros.</dd>
+<dt>Tobler (función de)</dt><dd>Fórmula que ajusta la velocidad al caminar según la pendiente: más lento en subida fuerte, algo más rápido en una bajada suave.</dd>
+<dt>GeoJSON, CSV, ASC</dt><dd>Formatos de archivo: GeoJSON guarda puntos y polígonos con atributos; CSV es una tabla de texto; ASC es una capa de celdas (ráster) para programas de SIG.</dd>
+<dt>SIG / QGIS</dt><dd>Sistemas de Información Geográfica, programas para trabajar con mapas. QGIS es uno gratuito.</dd>
+<dt>Latitud y longitud</dt><dd>Coordenadas que ubican un punto en la Tierra: la latitud mide norte-sur y la longitud, este-oeste. En el Valle de San Nicolás, la latitud ronda 6,1 y la longitud, -75,4.</dd>
+</dl>
+
+<p class="cred" style="margin-top:36px">Datos de la red vial y los destinos: © colaboradores de OpenStreetMap (ODbL). Población: estimación a partir del CNPV 2018 del DANE, no son conteos. Los resultados dependen de supuestos editables y deben leerse como órdenes de magnitud.</p>
+</main>
+</body>
+</html>
