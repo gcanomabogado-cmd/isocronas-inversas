@@ -762,6 +762,8 @@ tr.active td{background:color-mix(in srgb,var(--accent) 10%,transparent)}
 .banner{position:absolute;left:50%;transform:translateX(-50%);top:12px;z-index:550;background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:6px 12px;font:12px var(--f-mono);color:var(--muted);max-width:calc(100% - 24px)}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:2000;background:var(--fg);color:var(--bg);padding:8px 14px;border-radius:4px;font-size:13px;max-width:calc(100% - 32px)}
 .gridimg{image-rendering:pixelated}
+.unum{background:none;border:0}
+.unum span{display:flex;align-items:center;justify-content:center;width:22px;height:22px;margin:-11px 0 0 -11px;border-radius:50%;background:#d11a2a;color:#fff;border:2px solid #fff;box-shadow:0 0 0 1px #0007;font:700 12px var(--f-body)}
 .mname{background:none;border:0;pointer-events:none}
 .mname span{display:inline-block;transform:translate(-50%,-50%);white-space:nowrap;font:600 14px var(--f-display);letter-spacing:.04em;text-transform:uppercase;color:var(--fg);
   text-shadow:0 0 3px var(--panel),0 0 3px var(--panel),0 0 5px var(--panel),0 0 5px var(--panel)}
@@ -931,6 +933,21 @@ section>h2:hover{color:var(--accent)}
       <div class="row"><button class="primary" id="btnCrono">Dibujar</button><button id="btnCronoPng" disabled>Descargar PNG</button></div>
       <div class="status" id="cronoStatus">—</div>
       <canvas id="cronoCv" width="1100" height="640" style="width:100%;max-width:100%;height:auto;display:none;border:1px solid var(--line);border-radius:4px;background:#fff"></canvas>
+    </section>
+
+    <section id="secUbic">
+      <h2>Dónde acercar el servicio <small>personas</small></h2>
+      <p class="hint">Busca dónde poner nuevos destinos para que más personas queden dentro del umbral. Cuenta a las personas de la población cargada que hoy no llegan a un destino activo en ese tiempo (incluidas las que no tienen acceso) y elige, de a uno, el punto que más personas suma. Los candidatos son nodos de la red cercanos al centro de zonas del tamaño indicado; se mide siempre por tiempo. Es un ejercicio de lectura: señala dónde empezar a conversar con las comunidades, no dónde construir. Las personas son estimaciones, no conteos, y el umbral, el número de puntos y la zona son supuestos.</p>
+      <div class="grid2">
+        <label class="f">Perfil<select id="selUbicPerfil"></select></label>
+        <label class="f">Umbral (min)<input type="number" id="inUbicT" min="5" max="120" step="5" value="15"></label>
+        <label class="f">Puntos a ubicar<input type="number" id="inUbicK" min="1" max="30" step="1" value="8"></label>
+        <label class="f">Zona candidata (m)<input type="number" id="inUbicZ" min="250" max="5000" step="250" value="1000"></label>
+        <label class="f">Máx. candidatos<input type="number" id="inUbicC" min="20" max="800" step="20" value="400"></label>
+      </div>
+      <div class="row"><button class="primary" id="btnUbicBuscar">Buscar</button><button id="btnUbicAdd" disabled>Agregar como destinos</button><button id="btnUbicCSV" disabled>Descargar CSV</button></div>
+      <div class="status" id="ubicStatus">—</div>
+      <div class="tablewrap"><table id="tblUbic"></table></div>
     </section>
 
     <section id="secRes">
@@ -1237,16 +1254,24 @@ class Heap{constructor(n){this.k=new Float64Array(n);this.v=new Int32Array(n);th
   pop(){const top=this.v[0];this.top=this.k[0];const n=--this.n;
     if(n>0){const key=this.k[n],val=this.v[n];let i=0;for(;;){let c=2*i+1;if(c>=n)break;if(c+1<n&&this.k[c+1]<this.k[c])c++;if(this.k[c]>=key)break;this.k[i]=this.k[c];this.v[i]=this.v[c];i=c;}this.k[i]=key;this.v[i]=val;}
     return top;}}
-function solve(p,destNodes){
-  const n=S.net,N=n.N,bus=p.modo==='bus',veh=p.modo==='vehiculo',LN=bus?2:1,SZ=N*LN;
+// Costos por arista de un perfil (y capa de bus). Se pueden calcular una vez y pasar a varias llamadas de solve (opt.costs).
+function costosDe(p){
+  const n=S.net,N=n.N,bus=p.modo==='bus',veh=p.modo==='vehiculo';
   const base=veh?vehCosts(p,false):walkCosts(p,marchaOf(p)),bc=bus?vehCosts(p,true):null;
   let nodeBus=null;if(bus){nodeBus=new Uint8Array(N);for(let e=0;e<n.M;e++)if(bc.ab[e]<Infinity||bc.ba[e]<Infinity){nodeBus[n.ea[e]]=1;nodeBus[n.eb[e]]=1;}}
+  return {base,bc,nodeBus};
+}
+// opt (opcional): {crit:'t'|'g' fuerza el criterio, cut: no se expande por encima de ese peso (segundos si crit='t'), costs: costosDe(p) ya calculado}.
+// Sin opt el comportamiento es el de siempre.
+function solve(p,destNodes,opt){
+  const n=S.net,N=n.N,bus=p.modo==='bus',veh=p.modo==='vehiculo',LN=bus?2:1,SZ=N*LN;
+  const {base,bc,nodeBus}=(opt&&opt.costs)||costosDe(p),cut=opt&&opt.cut>=0?opt.cut:Infinity;
   const W=new Float64Array(SZ).fill(Infinity),T=new Float64Array(SZ).fill(Infinity),D=new Float64Array(SZ),Mo=new Float64Array(SZ);
   const nx=new Int32Array(SZ).fill(-1),ne=new Int32Array(SZ).fill(-1);
-  const vot=votSec()*p.personas,crit=P().crit,h=new Heap(Math.max(1024,N));
+  const vot=votSec()*p.personas,crit=(opt&&opt.crit)||P().crit,h=new Heap(Math.max(1024,N));
   for(const d of destNodes){W[d]=0;T[d]=0;h.push(0,d);}
   const {off,adjN,adjE,adjD,len}=n;
-  const relax=(sv,s,w,t,dd,m,e)=>{if(w<W[sv]){W[sv]=w;T[sv]=T[s]+t;D[sv]=D[s]+dd;Mo[sv]=Mo[s]+m;nx[sv]=s;ne[sv]=e;h.push(w,sv);}};
+  const relax=(sv,s,w,t,dd,m,e)=>{if(w<W[sv]&&w<=cut){W[sv]=w;T[sv]=T[s]+t;D[sv]=D[s]+dd;Mo[sv]=Mo[s]+m;nx[sv]=s;ne[sv]=e;h.push(w,sv);}};
   while(h.n){const s=h.pop(),w=h.top;if(w>W[s])continue;const L=s>=N?1:0,u=s-L*N;
     const AB=L?bc.ab:base.ab,BA=L?bc.ba:base.ba;
     for(let k=off[u];k<off[u+1];k++){const e=adjE[k],t=adjD[k]?AB[e]:BA[e];if(t===Infinity)continue;
@@ -1283,10 +1308,10 @@ function buildGrid(){
     const nn=nearest(a1-(r+.5)*dA,o0+(c+.5)*dO,snap,K,false);for(let k=0;k<nn.length;k++){cn[i*K+k]=nn[k][1];cd[i*K+k]=nn[k][0];}}
   S.grid={a0,o0,a1,o1,dA,dO,cols,rows,NC,inside,cn,cd,K,cs};
 }
-function cellValues(p,r){
+function cellValues(p,r,opt){
   const g=S.grid,{NC,K,cn,cd}=g,vacc=Math.max(0.1,p.v0)/3.6;
   const cT=new Float32Array(NC).fill(NaN),cD=new Float32Array(NC).fill(NaN),cM=new Float32Array(NC).fill(NaN),cG=new Float32Array(NC).fill(NaN),cNode=new Int32Array(NC).fill(-1);
-  const crit=P().crit;
+  const crit=(opt&&opt.crit)||P().crit;
   for(let i=0;i<NC;i++){if(cn[i*K]<0)continue;let best=Infinity,bn=-1,bd=0;
     for(let k=0;k<K;k++){const nd=cn[i*K+k];if(nd<0)break;const d=cd[i*K+k],ta=d/vacc;
       const v=crit==='g'?r.G[nd]+ta*r.vot:r.T[nd]+ta;if(v<best){best=v;bn=nd;bd=d;}}
@@ -1309,7 +1334,7 @@ let calcTimer=null;
 function scheduleCalc(ms=350){clearTimeout(calcTimer);calcTimer=setTimeout(runCalc,ms);}
 async function runCalc(){
   if(!S.net)return;if(S.busy){S.pending=true;return;}S.busy=true;S.pending=false;$('#btnCalc').disabled=true;
-  const net=S.net;
+  const net=S.net;ubicReset(); // los puntos propuestos dependen de los destinos, la población y los parámetros vigentes
   try{
     const dn=activeDestNodes();const res={};
     if(!dn.length){S.res={};cronoReset();$('#calcStatus').textContent='Selecciona al menos un destino.';renderAll();return;}
@@ -1423,6 +1448,64 @@ function cronoPoint(g,i,dLat,dLon,tMin){
   const row=Math.floor(i/g.cols),col=i%g.cols,lat=g.a1-(row+.5)*g.dA,lon=g.o0+(col+.5)*g.dO;
   const dx=(lon-dLon)*Math.cos(dLat*Math.PI/180)*111320,dy=(lat-dLat)*111320;
   return {ang:Math.atan2(dy,dx),r:tMin};
+}
+
+/* =================== dónde acercar el servicio =================== */
+// Localización de cobertura máxima con selección voraz. Grupo objetivo = personas (población cargada, con la misma regla de campo que popStats)
+// que hoy NO llegan a un destino activo dentro del umbral, incluidas las que no tienen acceso; las celdas sin red quedan fuera.
+// Candidatos = nodos de la red cercanos al centro ponderado de zonas de `zona` m sobre el grupo objetivo. Para cada candidato se corre UNA búsqueda
+// inversa truncada al umbral y se anotan las celdas del grupo que cubriría; después se elige, de a uno, el que cubre más personas aún descubiertas.
+// Siempre con criterio de tiempo (no costo generalizado). Es un ejercicio de lectura: señala dónde empezar a conversar, no dónde construir.
+// Sin DOM: recibe los parámetros como argumentos (o: {umbral min, k puntos, zona m, maxCand}).
+function ubicacionPrepara(p,o){
+  const g=S.grid,pg=S.popGrid,pop=S.pop;
+  if(!g||!pg||!pop)throw new Error('Carga la población y calcula primero: la búsqueda cuenta personas.');
+  const usaPmr=p.grupo==='pmr'&&pop.hasPmr,arr=usaPmr?pg.pmr:pg.tot,costs=costosDe(p),dn=destNodesFor(p);
+  if(!dn.length)throw new Error('Selecciona al menos un destino activo.');
+  const c0=cellValues(p,solve(p,dn,{crit:'t',costs}),{crit:'t'}),tgt=[],w=[];let grupo=0,sinAcceso=0;
+  for(let i=0;i<g.NC;i++){const a=arr[i];if(!(a>0))continue;const t=c0.cT[i];if(t!==t)continue;if(t/60<=o.umbral)continue;
+    tgt.push(i);w.push(a);grupo+=a;if(t===Infinity)sinAcceso+=a;}
+  // zonas candidatas: cubetas de `zona` m; centro ponderado por las personas del grupo objetivo
+  const latc=(g.a0+g.a1)/2,dAz=o.zona/111320,dOz=o.zona/(111320*Math.cos(latc*Math.PI/180)),zonas=new Map();
+  for(let j=0;j<tgt.length;j++){const i=tgt[j],row=Math.floor(i/g.cols),col=i%g.cols,lat=g.a1-(row+.5)*g.dA,lon=g.o0+(col+.5)*g.dO;
+    const key=Math.floor((g.a1-lat)/dAz)*100000+Math.floor((lon-g.o0)/dOz);let z=zonas.get(key);if(!z){z={key,w:0,la:0,lo:0};zonas.set(key,z);}
+    z.w+=w[j];z.la+=w[j]*lat;z.lo+=w[j]*lon;}
+  const orden=[...zonas.values()].sort((a,b)=>b.w-a.w||a.key-b.key),candTotal=orden.length,cand=[],vistos=new Set();
+  for(const z of orden){if(cand.length>=o.maxCand)break;
+    const nn=nearest(z.la/z.w,z.lo/z.w,2000,1,true,modeMask(p));if(!nn.length)continue;const nd=nn[0][1];if(vistos.has(nd))continue;vistos.add(nd);
+    cand.push({nodo:nd,lat:S.net.lat[nd],lon:S.net.lon[nd],cov:null});}
+  const aviso=p.modo==='vehiculo'&&p.terminal>=o.umbral?`La espera del vehículo en este perfil (${p.terminal} min) es mayor o igual que el umbral: un destino nuevo casi no cubriría a nadie. Prueba con un umbral mayor o con otro perfil.`:'';
+  return {p,o,tau:o.umbral*60,costs,tgt,w,grupo,sinAcceso,cand,candTotal,truncado:candTotal>o.maxCand,aviso,vacc:Math.max(0.1,p.v0)/3.6,fb:new Array(tgt.length).fill(null)};
+}
+// Celdas del grupo (índices en U.tgt) que cubriría un destino nuevo en el nodo de U.cand[c]. Replica cellValues: los K nodos más cercanos de la celda y,
+// si ninguno llega, los nodos transitables por el modo del perfil.
+function ubicacionCandidato(U,c){
+  const g=S.grid,K=g.K,cn=g.cn,cd=g.cd,p=U.p,T=solve(p,[U.cand[c].nodo],{crit:'t',costs:U.costs,cut:U.tau}).T,cov=[];
+  for(let j=0;j<U.tgt.length;j++){const i=U.tgt[j];let best=Infinity;
+    for(let k=0;k<K;k++){const nd=cn[i*K+k];if(nd<0)break;const t=T[nd]+cd[i*K+k]/U.vacc;if(t<best)best=t;}
+    if(best===Infinity){
+      if(!U.fb[j]){const row=Math.floor(i/g.cols),col=i%g.cols;U.fb[j]=nearest(g.a1-(row+.5)*g.dA,g.o0+(col+.5)*g.dO,Math.max(g.cs*1.5,250),K,false,modeMask(p));}
+      for(const [d,nd] of U.fb[j]){const t=T[nd]+d/U.vacc;if(t<best)best=t;}}
+    if(best/60<=U.o.umbral)cov.push(j);}
+  U.cand[c].cov=cov;return cov;
+}
+function ubicacionVoraz(U){
+  const cub=new Uint8Array(U.tgt.length),picks=[];let acum=0;
+  for(let s=0;s<U.o.k;s++){let bi=-1,bg=0;
+    for(let c=0;c<U.cand.length;c++){const cv=U.cand[c].cov;if(!cv)continue;let gain=0;for(const j of cv)if(!cub[j])gain+=U.w[j];if(gain>bg+1e-9){bg=gain;bi=c;}}
+    if(bi<0)break;
+    for(const j of U.cand[bi].cov)cub[j]=1;acum+=bg;const cd=U.cand[bi];
+    picks.push({orden:s+1,nodo:cd.nodo,lat:cd.lat,lon:cd.lon,ganancia:bg,acumulada:acum,pct:U.grupo>0?acum/U.grupo:0});}
+  return picks;
+}
+// Comprobación independiente: agrega los nodos elegidos como destinos, vuelve a resolver y cuenta personas dentro del umbral antes y después.
+// La diferencia debe coincidir con la ganancia acumulada; si no, se informa la brecha.
+function ubicacionVerifica(U,picks){
+  const g=S.grid,pg=S.popGrid,p=U.p,arr=p.grupo==='pmr'&&S.pop.hasPmr?pg.pmr:pg.tot,dn=destNodesFor(p);
+  const dentro=nodos=>{const c=cellValues(p,solve(p,nodos,{crit:'t',costs:U.costs}),{crit:'t'});let s=0;
+    for(let i=0;i<g.NC;i++){const a=arr[i];if(!(a>0))continue;const t=c.cT[i];if(t===t&&t/60<=U.o.umbral)s+=a;}return s;};
+  const antes=dentro(dn),despues=dentro([...new Set([...dn,...picks.map(x=>x.nodo)])]),esperada=picks.length?picks[picks.length-1].acumulada:0;
+  return {antes,despues,ganancia:despues-antes,esperada,brecha:(despues-antes)-esperada};
 }
 
 /* =================== mapa =================== */
@@ -1669,7 +1752,54 @@ function cronoDibujar(){
   $('#cronoStatus').textContent=`${d.name}\n${pa.nombre}: ${fuera[0].toLocaleString('es-CO')} celdas a más de ${T} min · ${pb.nombre}: ${fuera[1].toLocaleString('es-CO')}`;
 }
 async function cronoPng(){if(!S.crono)return;const b=await (await fetch(S.crono.png)).blob();saveFile(`cartograma_tiempo_${slug()}.png`,b,'image/png');}
-function renderAll(){renderTable();drawGrid();drawDests();renderPopStatus();renderCronoSelects();}
+/* ---- dónde acercar el servicio (interfaz) ---- */
+function renderUbicSelect(){const sel=$('#selUbicPerfil');if(!sel)return;const v=sel.value,pr=PROFILES.filter(p=>p.on),ids=pr.map(p=>p.id);
+  sel.innerHTML=pr.map(p=>`<option value="${p.id}">${esc(p.nombre)}</option>`).join('');sel.value=ids.includes(v)?v:(ids.includes('p_silla')?'p_silla':ids[0]);}
+function ubicReset(){S.ubic=null;clearLayer('ubic');const st=$('#ubicStatus');if(st)st.textContent='—';const t=$('#tblUbic');if(t)t.innerHTML='';
+  for(const id of ['#btnUbicAdd','#btnUbicCSV']){const b=$(id);if(b)b.disabled=true;}}
+function ubicDibujar(){clearLayer('ubic');const u=S.ubic;if(!u)return;
+  S.layers.ubic=L.layerGroup(u.picks.map(s=>L.marker([s.lat,s.lon],{zIndexOffset:1200,keyboard:false,icon:L.divIcon({className:'unum',html:`<span>${s.orden}</span>`,iconSize:[0,0]})})
+    .bindTooltip(`Punto ${s.orden}: +${fmtN(s.ganancia)} personas`,{direction:'top',offset:[0,-12]}))).addTo(map);}
+function ubicRender(){const u=S.ubic;if(!u)return;
+  $('#tblUbic').innerHTML=`<tr><th>#</th><th>Personas que se suman</th><th>Acumulado</th><th>% del grupo</th><th>Lat, lon</th></tr>`+
+    u.picks.map(s=>`<tr data-lat="${s.lat}" data-lon="${s.lon}" style="cursor:pointer"><td class="num">${s.orden}</td><td class="num">${fmtN(s.ganancia)}</td><td class="num">${fmtN(s.acumulada)}</td><td class="num">${fmtPct(s.pct)}</td><td>${s.lat.toFixed(5)}, ${s.lon.toFixed(5)}</td></tr>`).join('');
+  const v=u.v,ok=Math.abs(v.brecha)<=Math.max(1,0.005*Math.max(1,v.esperada));
+  $('#ubicStatus').textContent=`${u.perfil}, umbral ${u.o.umbral} min\nGrupo objetivo: ${fmtN(u.grupo)} personas estimadas a más de ${u.o.umbral} min de un destino activo (${fmtN(u.sinAcceso)} sin acceso).\n`+
+    `${u.cand} candidatos evaluados${u.truncado?` de ${u.candTotal} (se limitó a los de más personas; sube el máximo para ver más)`:''} · ${u.seg.toFixed(0)} s\n`+
+    `${u.picks.length?`${u.picks.length} puntos suman ${fmtN(u.picks[u.picks.length-1].acumulada)} personas (${fmtPct(u.picks[u.picks.length-1].pct)} del grupo).`:'Ningún punto nuevo suma personas con estos parámetros.'}\n`+
+    `Comprobación independiente: ${fmtN(v.antes)} → ${fmtN(v.despues)} personas dentro del umbral (${ok?'coincide con la suma':'DIFERENCIA de '+fmtN(v.brecha)+' respecto de la suma'}).`+(u.aviso?'\n'+u.aviso:'');
+  for(const id of ['#btnUbicAdd','#btnUbicCSV'])$(id).disabled=!u.picks.length;
+  ubicDibujar();}
+async function ubicBuscar(){
+  if(S.busy)return toast('Espera a que termine el cálculo.');
+  const p=PROFILES.find(x=>x.id===$('#selUbicPerfil').value);
+  if(!S.net||!S.grid||!p||!S.res[p.id])return toast('Calcula primero las isócronas.');
+  if(!S.pop)return toast('Carga la población: la búsqueda cuenta personas.');
+  const o={umbral:Math.max(5,+$('#inUbicT').value||15),k:Math.min(30,Math.max(1,Math.round(+$('#inUbicK').value||8))),zona:Math.max(250,+$('#inUbicZ').value||1000),maxCand:Math.min(800,Math.max(20,Math.round(+$('#inUbicC').value||400)))};
+  const net=S.net,st=$('#ubicStatus'),btn=$('#btnUbicBuscar'),t0=performance.now();
+  ubicReset();S.busy=true;btn.disabled=true;
+  try{
+    st.textContent='Preparando el grupo objetivo…';await tick();
+    const U=ubicacionPrepara(p,o);
+    for(let c=0;c<U.cand.length;c++){
+      if(S.net!==net)throw new Error('la red cambió durante la búsqueda.');
+      ubicacionCandidato(U,c);
+      if(c%4===0){st.textContent=`Evaluando candidato ${c+1} de ${U.cand.length}…`;await tick();}}
+    st.textContent='Eligiendo puntos y comprobando…';await tick();
+    const picks=ubicacionVoraz(U),v=ubicacionVerifica(U,picks);
+    if(S.pending)st.textContent='Cambió algo durante la búsqueda: vuelve a buscar.';
+    else{S.ubic={picks,v,perfil:p.nombre,o,grupo:U.grupo,sinAcceso:U.sinAcceso,cand:U.cand.length,candTotal:U.candTotal,truncado:U.truncado,aviso:U.aviso,seg:(performance.now()-t0)/1000};ubicRender();}
+  }catch(e){console.error(e);st.textContent='Error: '+e.message;}
+  finally{S.busy=false;btn.disabled=false;if(S.pending)scheduleCalc(30);}
+}
+function ubicAgregar(){const u=S.ubic;if(!u||!u.picks.length)return;const n0=S.dests.filter(d=>d.origen==='proximidad').length;
+  u.picks.forEach((s,i)=>S.dests.push({id:'u'+Date.now()+'_'+i,name:'Punto de proximidad '+(n0+i+1),tipo:'proximidad',lat:s.lat,lon:s.lon,on:true,origen:'proximidad',nodeCar:null,nodeFoot:null}));
+  renderDests();scheduleCalc();toast(`${u.picks.length} puntos agregados como destinos; se recalcula.`);}
+function ubicCSV(){const u=S.ubic;if(!u)return toast('Busca primero.');
+  const L=['orden,lat,lon,personas_que_se_suman,acumulado,pct_del_grupo,perfil,umbral_min'];
+  for(const s of u.picks)L.push([s.orden,s.lat.toFixed(6),s.lon.toFixed(6),Math.round(s.ganancia),Math.round(s.acumulada),(s.pct*100).toFixed(1),'"'+u.perfil.replace(/"/g,'""')+'"',u.o.umbral].join(','));
+  saveFile(`puntos_de_proximidad_${slug()}.csv`,L.join('\n'),'text/csv');}
+function renderAll(){renderTable();drawGrid();drawDests();renderPopStatus();renderCronoSelects();renderUbicSelect();}
 function updateVOT(){const p=P();$('#votTxt').textContent=`Valor del tiempo: ${fmtCOP(p.smmlv/p.horas)} por hora y persona.`;}
 function syncBandsInput(){$('#inBands').value=BANDS_DEF[$('#selMetric').value];$('#lblCmp').style.visibility=$('#selMetric').value==='gap'?'visible':'hidden';}
 
@@ -1700,7 +1830,7 @@ function renderPopStatus(){
 
 /* =================== carga de red =================== */
 function setNet(raw,opts={}){
-  S.net=makeNet(raw);S.grid=null;S.res={};closeQuery();cronoReset();
+  S.net=makeNet(raw);S.grid=null;S.res={};closeQuery();cronoReset();ubicReset();
   const keep=opts.keepDests?S.dests.filter(d=>d.origen!=='osm'):[];
   S.dests=[...S.net.osmDests.map(d=>({...d})),...keep];
   if(opts.dests)S.dests=opts.dests.map(d=>({...d}));
@@ -2028,6 +2158,8 @@ $('#chkSteps').onchange=e=>{if(!S.layers.steps)return;e.target.checked?S.layers.
 $('#selBase').onchange=e=>setBase(e.target.value);
 $('#rngOp').oninput=e=>{if(S.layers.grid)S.layers.grid.setOpacity(+e.target.value);};
 $('#tblRes').addEventListener('click',e=>{const tr=e.target.closest('tr[data-pid]');if(!tr)return;$('#selProf').value=tr.dataset.pid;renderTable();drawGrid();if(S.queryLL)doQuery(S.queryLL);});
+$('#btnUbicBuscar').onclick=ubicBuscar;$('#btnUbicAdd').onclick=ubicAgregar;$('#btnUbicCSV').onclick=ubicCSV;
+$('#tblUbic').onclick=e=>{const tr=e.target.closest('tr[data-lat]');if(tr)map.setView([+tr.dataset.lat,+tr.dataset.lon],Math.max(map.getZoom(),15));};
 $('#btnCrono').onclick=cronoDibujar;$('#btnCronoPng').onclick=cronoPng;$('#btnExpCSV').onclick=expCSV;$('#btnExpASC').onclick=expASC;$('#btnExpDest').onclick=expDest;$('#btnExpParams').onclick=expParams;$('#btnExpInforme').onclick=expInforme;
 $('#btnOrigen').onclick=consultarOrigen;['#inpOLat','#inpOLon'].forEach(i=>$(i).addEventListener('keydown',e=>{if(e.key==='Enter')consultarOrigen();}));
 map.on('click',e=>{
